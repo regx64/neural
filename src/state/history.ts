@@ -22,9 +22,20 @@ export class History {
     this.params.length = 0;
   }
 
+  /** Drops everything recorded after `epoch` (rewinding to a snapshot). */
+  truncate(epoch: number): void {
+    let n = this.epochs.length;
+    while (n > 0 && this.epochs[n - 1] > epoch) n--;
+    for (const arr of this.series()) arr.length = n;
+    let p = this.paramEpochs.length;
+    while (p > 0 && this.paramEpochs[p - 1] > epoch) p--;
+    this.paramEpochs.length = p;
+    this.params.length = p;
+  }
+
   push(m: Metrics, params: Float64Array): void {
     const last = this.epochs[this.epochs.length - 1];
-    if (last !== undefined && m.epoch < last) this.clear(); // reset happened
+    if (last !== undefined && m.epoch < last) this.truncate(m.epoch - 1); // reset or rewind
     if (last === m.epoch) {
       // Same epoch re-emitted (e.g. pause): replace instead of duplicating the point.
       for (const arr of this.series()) arr.pop();

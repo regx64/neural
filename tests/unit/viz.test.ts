@@ -116,3 +116,14 @@ describe('isoLines', () => {
     for (let k = 0; k < segs.length; k += 2) expect(segs[k]).toBeCloseTo(2);
   });
 });
+
+describe('History.truncate', () => {
+  const m = (epoch: number) => ({ epoch, trainLoss: 1, testLoss: 1, trainAccuracy: 0, testAccuracy: 0 });
+  it('rewinds to a past epoch and continues from there', () => {
+    const h = new History();
+    for (const e of [0, 10, 20, 30]) h.push(m(e), new Float64Array(1));
+    h.push(m(15), new Float64Array(1)); // resumed from a snapshot at epoch 15
+    expect(h.epochs).toEqual([0, 10, 15]);
+    expect(h.paramEpochs).toEqual([0, 10, 15]);
+  });
+});

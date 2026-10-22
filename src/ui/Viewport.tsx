@@ -6,6 +6,7 @@ import type { Speed } from '@worker/protocol';
 import { CSS_COLORS, formatNumber, formatSigned } from '@viz/encoding';
 import { NetworkScene } from '@viz/three/NetworkScene';
 import { layerName } from '@viz/three/sceneRefs';
+import { edgeMax, edgeValue } from '@viz/edgeValue';
 import { Segmented } from './controls';
 import { useLiveTick } from './hooks';
 import { PauseIcon, PlayIcon, ResetIcon, StepIcon } from './icons';
@@ -90,6 +91,7 @@ function Narration() {
     testAccuracy: m?.testAccuracy ?? NaN,
     pastLoss,
     sampleCount: s.dataset.train.length,
+    previewEpoch: s.live.preview?.epoch,
   });
   return (
     <p className={`${styles.narration} ${styles[tone]}`} aria-live="polite" data-testid="narration">
@@ -141,6 +143,7 @@ function Player() {
         options={[
           { value: 'weight', label: '가중치', title: '연결선 = 가중치 w' },
           { value: 'contribution', label: '기여도', title: '연결선 = 현재 입력의 기여도 w·a' },
+          { value: 'gradient', label: '변화', title: '연결선 = 지난 에폭에 학습이 고친 방향과 양 (−∂L/∂w)' },
         ]}
       />
       <span className={styles.divider} />
@@ -160,41 +163,79 @@ function Player() {
   );
 }
 
+const MODE_LEGEND: Record<EdgeMode, { pos: string; neg: string; width: string }> = {
+  weight: { pos: '양수', neg: '음수', width: '굵기 |w|' },
+  contribution: { pos: '양수', neg: '음수', width: '굵기 |w·a|' },
+  gradient: { pos: '커지는 중', neg: '작아지는 중', width: '굵기 = 지난 에폭에 고쳐진 양' },
+};
+
 function Legend() {
   useLiveTick(4);
   const s = useLab.getState();
   const model = liveModel(s);
   const trace = liveTrace(s);
-  let max = 0;
-  if (model) {
-    for (const L of model.layers)
-      for (let j = 0; j < L.outSize; j++)
-        for (let i = 0; i < L.inSize; i++) {
-          const w = model.params[weightIndex(L, j, i)];
-          const v = s.edgeMode === 'contribution' && trace ? w * trace.a[L.index - 1][i] : w;
-          max = Math.max(max, Math.abs(v));
-        }
-  }
+  const max = model ? edgeMax(s.edgeMode, model, trace, s.live.gradMean) : 0;
+  const text = MODE_LEGEND[s.edgeMode];
   const act = s.config.network.activation;
   const scales = activationScales(s);
   const unbounded = act === 'relu' || act === 'linear';
   const hiddenScale = unbounded && scales.length > 2 ? Math.max(...scales.slice(1, -1)) : null;
   return (
-    <div className={styles.legend} aria-label="범례">
+    <div className={styles.legend} aria-label="범례" data-testid="legend">
       <div>
         <span>
           <i style={{ background: CSS_COLORS.positive }} />
-          양수
+          {text.pos}
         </span>
         <span>
           <i style={{ background: CSS_COLORS.negative }} />
-          음수
+          {text.neg}
         </span>
       </div>
       <div className="num">
-        굵기 |{s.edgeMode === 'weight' ? 'w' : 'w·a'}| · 최대 {max.toFixed(2)}
+        {text.width} · 최대 {s.edgeMode === 'gradient' ? max.toExponential(1) : max.toFixed(2)}
         {unbounded && ` · 활성화 p95 ${hiddenScale?.toFixed(2) ?? '—'}`}
       </div>
+    </div>
+  );
+}
+
+/** Shown while a past snapshot is on screen. */
+function TimeBanner() {
+  const preview = useLab((s) => s.live.preview);
+  const timeline = useLab((s) => s.timeline);
+  if (!preview) return null;
+  const { resumeFromPreview, exitPreview, stepSnapshot } = useLab.getState();
+  const k = timeline.findIndex((m) => m.id === preview.id);
+  return (
+    <div className={styles.timeBanner} role="status" data-testid="time-banner">
+      <button
+        type="button"
+        className={styles.icon}
+        onClick={() => stepSnapshot(-1)}
+        disabled={k <= 0}
+        aria-label="이전 기록"
+      >
+        ‹
+      </button>
+      <span className="num">
+        <b>Epoch {preview.epoch.toLocaleString()}</b> 시점을 보는 중
+      </span>
+      <button type="button" className={styles.icon} onClick={() => stepSnapshot(1)} aria-label="다음 기록">
+        ›
+      </button>
+      <span className={styles.divider} />
+      <button
+        type="button"
+        className={styles.resume}
+        onClick={() => resumeFromPreview(true)}
+        title="이 시점의 가중치로 돌아가 다시 학습해요. 이후 기록은 지워져요."
+      >
+        여기서 다시 학습
+      </button>
+      <button type="button" className={styles.backNow} onClick={exitPreview}>
+        현재로
+      </button>
     </div>
   );
 }
@@ -235,6 +276,11 @@ function Tooltip() {
     const w = model.params[weightIndex(model.layers[hover.layer - 1], hover.to, hover.from)];
     rows.push(['w', w]);
     rows.push(['w·a', w * trace.a[hover.layer - 1][hover.from]]);
+    if (s.edgeMode === 'gradient')
+      rows.push([
+        '변화',
+        edgeValue('gradient', model, trace, s.live.gradMean, hover.layer, hover.to, hover.from),
+      ]);
   }
   return (
     <div className={styles.tooltip} style={{ left: pointer.x + 14, top: pointer.y + 14 }} role="tooltip">
@@ -268,6 +314,7 @@ export function Viewport() {
           <Narration />
         </div>
         <Inspector />
+        <TimeBanner />
         <Legend />
         <Hint />
         <Player />

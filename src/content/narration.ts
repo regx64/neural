@@ -11,11 +11,18 @@ export interface NarrationInput {
   /** Training loss about 100 epochs ago, if known. */
   pastLoss?: number;
   sampleCount: number;
+  /** Set while a past snapshot is shown (Time Travel). */
+  previewEpoch?: number;
 }
 
 export type Tone = 'idle' | 'learning' | 'good' | 'warn';
 
 export function narrate(n: NarrationInput): { text: string; tone: Tone } {
+  if (n.previewEpoch !== undefined)
+    return {
+      text: `과거 Epoch ${n.previewEpoch.toLocaleString()} 시점이에요. 그때의 경계와 가중치를 보고 있어요.`,
+      tone: 'idle',
+    };
   if (n.sampleCount < 2) return { text: '점을 2개 이상 찍으면 학습할 수 있어요.', tone: 'idle' };
   if (n.epoch === 0) return { text: '▶ 버튼을 누르면 학습이 시작돼요.', tone: 'idle' };
   if (!Number.isFinite(n.trainLoss) || (n.epoch > 30 && n.trainLoss > 1.5))

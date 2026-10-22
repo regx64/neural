@@ -43,7 +43,13 @@ function useKeyboardShortcuts() {
           s.requestCamera({ kind: 'preset', preset: Number(e.key) as 1 | 2 | 3 });
           break;
         case 'Escape':
-          s.select(null);
+          if (s.live.preview) s.exitPreview();
+          else s.select(null);
+          break;
+        case 'ArrowLeft':
+        case 'ArrowRight':
+          e.preventDefault();
+          s.stepSnapshot(e.key === 'ArrowLeft' ? -1 : 1);
           break;
       }
     };

@@ -18,6 +18,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { liveModel, liveTrace, activationScales } from '@state/derived';
 import { layerSizesOf, useLab, type Target } from '@state/store';
 import { COLORS, edgeStyle, fadeToWhite, neuronColor, signedActivation, type RGB } from '../encoding';
+import { edgeMax, edgeValue } from '../edgeValue';
 import { computeLayout, type NetworkLayout } from '../layout';
 import { edgeShader, neuronShader, ringShader } from './shaders';
 import { sceneRefs } from './sceneRefs';
@@ -26,6 +27,11 @@ const SPHERE_RADIUS = 0.28;
 /** How much of their colour unrelated elements keep while something is selected. */
 const DIM_NEURON = 0.25;
 const DIM_EDGE = 0.12;
+const PULSE_LAYER_S = 0.25;
+/** Only edges carrying at least this share of their layer's largest |w·a| get a pulse. */
+const PULSE_MIN = 0.3;
+const REDUCED_MOTION =
+  typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 /** Is neuron (l, j) related to the current selection (itself or directly connected)? */
 function neuronRelated(sel: Target, l: number, j: number): boolean {
@@ -124,6 +130,7 @@ export function Network() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const layout = useMemo(() => computeLayout(sizes), [key]);
   const anim = useAnimatedLayout(layout);
+  const pulseRef = useRef<{ point: [number, number] | null; start: number }>({ point: null, start: -10 });
 
   const meshes = useMemo(() => {
     const n = layout.neuronCount;
@@ -134,6 +141,8 @@ export function Network() {
     );
     const ring = makeInstanced(new PlaneGeometry(1, 1), makeRingMaterial(0.76, 0.84), n);
     const marker = makeInstanced(new PlaneGeometry(1, 1), makeRingMaterial(0.8, 0.9), 2);
+    // Filled discs (ring with no hole) that travel along edges: the signal flow.
+    const pulse = makeInstanced(new PlaneGeometry(1, 1), makeRingMaterial(0, 0.9), layout.edgeCount);
     const edgeGeometry = makeEdgeGeometry(layout.edgeCount);
     const edgeMaterial = new ShaderMaterial({
       ...edgeShader,
@@ -141,13 +150,13 @@ export function Network() {
       transparent: true,
       depthWrite: false,
     });
-    return { sphere, ring, marker, edgeGeometry, edgeMaterial };
+    return { sphere, ring, marker, pulse, edgeGeometry, edgeMaterial };
   }, [layout]);
 
   useEffect(() => {
     sceneRefs.spheres = meshes.sphere;
     return () => {
-      for (const m of [meshes.sphere, meshes.ring, meshes.marker]) {
+      for (const m of [meshes.sphere, meshes.ring, meshes.marker, meshes.pulse]) {
         m.geometry.dispose();
         (m.material as ShaderMaterial).dispose();
         m.dispose();
@@ -229,33 +238,22 @@ export function Network() {
     ring.instanceMatrix.needsUpdate = true;
     ring.instanceColor!.needsUpdate = true;
 
-    // 3. Edges: weight (or contribution w·a) → colour sign, width + opacity magnitude.
-    const contrib = s.edgeMode === 'contribution' && trace;
+    // 3. Edges: the mode's value (w, w·a or −∂L/∂w) → colour sign, width + opacity magnitude.
     const attrs = edgeGeometry.attributes;
     const aStart = attrs.aStart.array as Float32Array;
     const aEnd = attrs.aEnd.array as Float32Array;
     const aColor = attrs.aColor.array as Float32Array;
     const aWidth = attrs.aWidth.array as Float32Array;
     const aAlpha = attrs.aAlpha.array as Float32Array;
-    let maxAbs = 0;
-    if (model) {
-      for (let l = 1; l <= last; l++) {
-        const L = model.layers[l - 1];
-        for (let j = 0; j < L.outSize; j++)
-          for (let i = 0; i < L.inSize; i++) {
-            const w = model.params[L.wOffset + j * L.inSize + i];
-            maxAbs = Math.max(maxAbs, Math.abs(contrib ? w * trace.a[l - 1][i] : w));
-          }
-      }
-    }
+    const gradMean = s.live.gradMean;
+    const maxAbs = model ? edgeMax(s.edgeMode, model, trace, gradMean) : 0;
     for (let l = 1; l <= last; l++) {
       const nIn = sizes[l - 1];
       const L = model?.layers[l - 1];
       for (let j = 0; j < sizes[l]; j++) {
         for (let i = 0; i < nIn; i++) {
           const e = edgeOffsets[l] + j * nIn + i;
-          const w = L ? model!.params[L.wOffset + j * nIn + i] : 0;
-          const v = contrib ? w * trace.a[l - 1][i] : w;
+          const v = L ? edgeValue(s.edgeMode, model!, trace, gradMean, l, j, i) : 0;
           const st = edgeStyle(v, maxAbs);
           const from = neuronOffsets[l - 1] + i;
           const to = neuronOffsets[l] + j;
@@ -307,6 +305,56 @@ export function Network() {
     markerFor(sameTarget(hover, sel) ? null : hover, 1, 0.35);
     marker.instanceMatrix.needsUpdate = true;
     marker.instanceColor!.needsUpdate = true;
+
+    // 5. Signal flow: when the probe input changes, a wave travels input → output, one layer per
+    // PULSE_LAYER_S. Each edge's dot size is its share of the layer's largest |w·a|.
+    const { pulse } = meshes;
+    const now = state.clock.elapsedTime;
+    if (pulseRef.current.point !== s.probe.point) {
+      pulseRef.current = { point: s.probe.point, start: now };
+    }
+    const progress = (now - pulseRef.current.start) / PULSE_LAYER_S;
+    const pulsesOn = s.showPulses && !REDUCED_MOTION && model && trace && progress < last + 1;
+    for (let l = 1; l <= last; l++) {
+      const nIn = sizes[l - 1];
+      const local = progress - (l - 1);
+      const active = pulsesOn && local > 0 && local < 1;
+      let layerMax = 0;
+      if (active)
+        for (let j = 0; j < sizes[l]; j++)
+          for (let i = 0; i < nIn; i++)
+            layerMax = Math.max(layerMax, Math.abs(edgeValue('contribution', model!, trace, null, l, j, i)));
+      for (let j = 0; j < sizes[l]; j++) {
+        for (let i = 0; i < nIn; i++) {
+          const e = edgeOffsets[l] + j * nIn + i;
+          let size = 0;
+          if (active && layerMax > 0) {
+            const c = edgeValue('contribution', model!, trace, null, l, j, i);
+            const strength = Math.abs(c) / layerMax;
+            if (strength >= PULSE_MIN) {
+              const from = (neuronOffsets[l - 1] + i) * 3;
+              const to = (neuronOffsets[l] + j) * 3;
+              tmp.v.set(
+                a.current[from] + (a.current[to] - a.current[from]) * local,
+                a.current[from + 1] + (a.current[to + 1] - a.current[from + 1]) * local,
+                a.current[from + 2] + (a.current[to + 2] - a.current[from + 2]) * local,
+              );
+              size = (0.12 + 0.18 * strength) * Math.sin(Math.PI * local);
+              const col = c >= 0 ? COLORS.positive : COLORS.negative;
+              setColor(
+                pulse,
+                e,
+                sel && !edgeRelated(sel, l, i, j) ? fadeToWhite(col, DIM_NEURON, tmp.out) : col,
+              );
+            }
+          }
+          tmp.m.makeScale(size, size, size).setPosition(tmp.v);
+          pulse.setMatrixAt(e, tmp.m);
+        }
+      }
+    }
+    pulse.instanceMatrix.needsUpdate = true;
+    pulse.instanceColor!.needsUpdate = true;
   });
 
   return (
@@ -320,6 +368,7 @@ export function Network() {
       <primitive object={meshes.sphere} />
       <primitive object={meshes.ring} renderOrder={2} />
       <primitive object={meshes.marker} renderOrder={3} />
+      <primitive object={meshes.pulse} renderOrder={4} />
     </group>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useLab } from '@state/store';
+import type { SnapshotMeta } from '@core/timeline';
 import type { History } from '@state/history';
 import styles from './canvas2d.module.css';
 
@@ -19,7 +20,20 @@ function niceEpochTicks(max: number): number[] {
   return ticks;
 }
 
-function draw(canvas: HTMLCanvasElement, h: History, kind: ChartKind, log: boolean) {
+/** Horizontal mapping shared by drawing and scrubbing. */
+function epochRange(h: History): [number, number] {
+  const n = h.epochs.length;
+  return [0, Math.max(10, n ? h.epochs[n - 1] : 0)];
+}
+
+function draw(
+  canvas: HTMLCanvasElement,
+  h: History,
+  kind: ChartKind,
+  log: boolean,
+  timeline: SnapshotMeta[],
+  previewEpoch: number | null,
+) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   const dpr = canvas.width / Math.max(1, canvas.clientWidth);
@@ -33,8 +47,7 @@ function draw(canvas: HTMLCanvasElement, h: History, kind: ChartKind, log: boole
 
   const series = kind === 'loss' ? [h.trainLoss, h.testLoss] : [h.trainAccuracy, h.testAccuracy];
   const n = h.epochs.length;
-  const maxEpoch = Math.max(10, n ? h.epochs[n - 1] : 0);
-  const minEpoch = 0;
+  const [minEpoch, maxEpoch] = epochRange(h);
 
   let lo = 0;
   let hi = 1;
@@ -103,6 +116,29 @@ function draw(canvas: HTMLCanvasElement, h: History, kind: ChartKind, log: boole
     ctx.stroke();
   });
   ctx.setLineDash([]);
+
+  // Time Travel: recorded snapshots along the axis, and the one being viewed.
+  const axisY = H - PAD.bottom;
+  for (const m of timeline) {
+    if (m.epoch > maxEpoch) continue;
+    ctx.fillStyle = m.event ? '#1d1d1f' : '#c7c7cc';
+    ctx.beginPath();
+    ctx.arc(xOf(m.epoch), axisY, m.event ? 2.2 : 1.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  if (previewEpoch !== null) {
+    const x = xOf(previewEpoch);
+    ctx.strokeStyle = '#0066cc';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x, PAD.top);
+    ctx.lineTo(x, axisY);
+    ctx.stroke();
+    ctx.fillStyle = '#0066cc';
+    ctx.beginPath();
+    ctx.arc(x, axisY, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 /** Training/validation curve for loss or accuracy, redrawn as history arrives. */
@@ -117,7 +153,8 @@ export function MetricChart({ kind, log = false }: { kind: ChartKind; log?: bool
       if (raf) return;
       raf = requestAnimationFrame(() => {
         raf = 0;
-        draw(canvas, useLab.getState().history, kind, log);
+        const st = useLab.getState();
+        draw(canvas, st.history, kind, log, st.timeline, st.live.preview?.epoch ?? null);
       });
     };
     const resize = () => {
@@ -129,7 +166,7 @@ export function MetricChart({ kind, log = false }: { kind: ChartKind; log?: bool
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
     const unsub = useLab.subscribe((s, p) => {
-      if (s.historyTick !== p.historyTick) request();
+      if (s.historyTick !== p.historyTick || s.timeline !== p.timeline) request();
     });
     resize();
     return () => {
@@ -139,8 +176,35 @@ export function MetricChart({ kind, log = false }: { kind: ChartKind; log?: bool
     };
   }, [kind, log]);
 
+  // Scrubbing: press and drag across the chart to view the nearest recorded snapshot.
+  const scrub = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const st = useLab.getState();
+    if (st.timeline.length === 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const [lo, hi] = epochRange(st.history);
+    const t = (e.clientX - rect.left - PAD.left) / (rect.width - PAD.left - PAD.right);
+    const epoch = lo + Math.max(0, Math.min(1, t)) * (hi - lo);
+    let best = st.timeline[0];
+    for (const m of st.timeline) if (Math.abs(m.epoch - epoch) < Math.abs(best.epoch - epoch)) best = m;
+    if (st.live.preview?.id !== best.id) st.previewSnapshot(best.id);
+  };
+
   return (
-    <canvas ref={ref} className={styles.chart} aria-label={kind === 'loss' ? '손실 곡선' : '정확도 곡선'} />
+    <canvas
+      ref={ref}
+      className={styles.chart}
+      aria-label={
+        kind === 'loss' ? '손실 곡선 — 눌러서 과거 시점 보기' : '정확도 곡선 — 눌러서 과거 시점 보기'
+      }
+      data-testid="metric-chart"
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        scrub(e);
+      }}
+      onPointerMove={(e) => {
+        if (e.buttons) scrub(e);
+      }}
+    />
   );
 }
 

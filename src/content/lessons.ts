@@ -8,6 +8,10 @@ export type TourTarget = 'data' | 'draw' | 'viewport' | 'play' | 'stats' | 'netw
 export interface StepContext {
   /** An epoch-0 state was seen after the step began (i.e. the run was reset or re-created). */
   sawReset: boolean;
+  /** Snapshot ids previewed during this step (Time Travel). */
+  seen: number[];
+  /** `LabState.resumes` when the step began. */
+  resumesAtStart: number;
 }
 
 export interface LessonStep {
@@ -238,6 +242,47 @@ export const LESSONS: Lesson[] = [
       {
         title: '핵심 정리',
         body: '좋은 모델은 학습 데이터만이 아니라 처음 보는 데이터도 잘 맞혀요. 검증 정확도를 늘 함께 보는 습관을 들이세요.',
+      },
+    ],
+  },
+  {
+    id: 'time-travel',
+    title: '학습 과정 되감기',
+    summary: '학습을 녹화한 기록을 되감아 보고, 과거에서 다른 길로 가 봐요.',
+    minutes: 3,
+    config: D,
+    steps: [
+      {
+        title: '먼저 학습시키기',
+        body: '학습하는 동안 NEURAL은 모델의 상태를 자동으로 **기록**해 둬요. 동영상처럼 나중에 되감아 볼 수 있어요.',
+        task: '▶를 누르고 정확도 95%를 넘겨 보세요',
+        target: 'play',
+        done: (s) => acc(s) >= 0.95,
+      },
+      {
+        title: '처음으로 되감기',
+        body: '학습 곡선 아래의 점들이 기록된 시점이에요. 곡선의 왼쪽 끝을 누르면 학습 초기의 네트워크로 돌아가요. 3D와 데이터 그림이 모두 그때 모습으로 바뀌어요.',
+        task: '학습 곡선의 왼쪽 끝(Epoch 20 이전)을 눌러 보세요',
+        target: 'chart',
+        done: (s) => !!s.live.preview && s.live.preview.epoch <= 20,
+      },
+      {
+        title: '경계가 생기는 과정',
+        body: '곡선 위를 누른 채 오른쪽으로 끌거나 키보드 ← → 키를 눌러 보세요. 선이 엉뚱한 곳에 있다가 점점 X자로 자리를 잡아 가요.',
+        task: '서로 다른 시점을 4곳 이상 둘러보세요',
+        target: 'chart',
+        done: (_, ctx) => ctx.seen.length >= 4,
+      },
+      {
+        title: '과거에서 다른 길로',
+        body: '과거 시점에서 **여기서 다시 학습**을 누르면 그 순간의 가중치로 돌아가 학습을 이어 가요. 그 전에 학습률 같은 설정을 바꾸면 "그때 이랬다면?"을 실험할 수 있어요.',
+        task: '과거 시점에서 "여기서 다시 학습"을 누르세요',
+        target: 'viewport',
+        done: (s, ctx) => s.resumes > ctx.resumesAtStart,
+      },
+      {
+        title: '핵심 정리',
+        body: '학습은 한 번에 일어나지 않아요. 수많은 작은 수정이 쌓여 경계가 만들어져요. 기록을 되감아 보면 모델이 언제 무엇을 배웠는지 알 수 있어요.',
       },
     ],
   },

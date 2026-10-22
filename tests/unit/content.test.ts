@@ -27,6 +27,9 @@ describe('narrate', () => {
     const r = narrate({ ...base, epoch: 300, trainAccuracy: 0.65, trainLoss: 0.664, pastLoss: 0.665 });
     expect(r.text).toContain('은닉층');
   });
+  it('says when a past snapshot is on screen', () => {
+    expect(narrate({ ...base, previewEpoch: 40 }).text).toContain('Epoch 40');
+  });
   it('asks for points on an empty drawing', () => {
     expect(narrate({ ...base, sampleCount: 0 }).text).toContain('점');
   });

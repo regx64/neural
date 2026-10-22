@@ -337,8 +337,21 @@ function EdgeView({
           { label: '가중치 w', value: formatSigned(w), color: signColor(w) },
           { label: '입력 활성화 a', value: formatSigned(a) },
           { label: '기여도 w·a', value: formatSigned(w * a), color: signColor(w * a) },
+          ...(s.live.gradMean
+            ? [
+                {
+                  label: '최근 변화 방향 −∂L/∂w',
+                  value: formatSigned(-s.live.gradMean[pi], 4),
+                  color: signColor(-s.live.gradMean[pi]),
+                },
+              ]
+            : []),
         ]}
       />
+      <p className={styles.hint}>
+        변화 방향이 +면 학습이 이 가중치를 키우는 중, −면 줄이는 중이에요. 0에 가까우면 거의 다 배운
+        연결이에요.
+      </p>
       <div>
         <h3 className={styles.subhead}>
           가중치 변화

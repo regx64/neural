@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { generateDataset, type Dataset, type DatasetConfig } from '@core/data/datasets';
 import { DEFAULT_CONFIG, type ExperimentConfig, type Hyper, type NetworkConfig } from '@core/train/config';
+import type { SnapshotMeta } from '@core/timeline';
 import type { Metrics } from '@core/train/trainer';
 import { TrainerClient } from '@worker/client';
 import type { Speed, WorkerEvent } from '@worker/protocol';
@@ -14,7 +15,7 @@ export type Target =
   | { kind: 'neuron'; layer: number; index: number }
   | { kind: 'edge'; layer: number; from: number; to: number };
 
-export type EdgeMode = 'weight' | 'contribution';
+export type EdgeMode = 'weight' | 'contribution' | 'gradient';
 
 export interface Live {
   params: Float64Array | null;
@@ -22,6 +23,10 @@ export interface Live {
   running: boolean;
   boundary: Float32Array | null;
   boundaryRes: number;
+  /** Mean ∂L/∂θ of the last epoch (same layout as params). */
+  gradMean: Float32Array | null;
+  /** Set while a past snapshot is shown instead of the live run. */
+  preview: { id: number; epoch: number } | null;
   /** Measured training throughput (epochs/s), smoothed. */
   epochsPerSecond: number;
   /** Increments on every state received from the worker. */
@@ -57,6 +62,13 @@ export interface LabState {
   pointer: { x: number; y: number };
   edgeMode: EdgeMode;
   speed: Speed;
+  /** Recorded snapshots of the current run (Time Travel). */
+  timeline: SnapshotMeta[];
+  /** Snapshot most recently requested for preview (ahead of the worker's confirmation). */
+  previewTarget: number | null;
+  /** How many times the learner rewound and continued from a snapshot. */
+  resumes: number;
+  showPulses: boolean;
   camera: CameraRequest | null;
   error: string | null;
   /** UI state that lessons can drive. */
@@ -89,6 +101,14 @@ export interface LabState {
   setAdvancedOpen(open: boolean): void;
   setDrawMode(on: boolean): void;
   setDrawClass(c: 0 | 1): void;
+  setShowPulses(on: boolean): void;
+  /** Time Travel: show a recorded snapshot (pauses training). */
+  previewSnapshot(id: number): void;
+  exitPreview(): void;
+  /** Continue training from the snapshot being previewed; later records are dropped. */
+  resumeFromPreview(play: boolean): void;
+  /** Move the preview to the previous (−1) or next (+1) snapshot. */
+  stepSnapshot(dir: -1 | 1): void;
 }
 
 let client: TrainerClient | null = null;
@@ -101,6 +121,8 @@ const emptyLive = (): Live => ({
   running: false,
   boundary: null,
   boundaryRes: 0,
+  gradMean: null,
+  preview: null,
   epochsPerSecond: 0,
   tick: 0,
 });
@@ -131,6 +153,8 @@ export const useLab = create<LabState>()((set, get) => {
       live: { ...emptyLive(), running },
       historyTick: s.historyTick + 1,
       selection: s.selection && targetExists(s.selection, sizes) ? s.selection : null,
+      timeline: [],
+      previewTarget: null,
       hover: null,
       probe: dataChanged
         ? { ...s.probe, sampleIndex: 0, point: s.probe.auto ? null : s.probe.point }
@@ -155,7 +179,8 @@ export const useLab = create<LabState>()((set, get) => {
     } else if (!e.running) eps = 0;
     lastStateAt = now;
     lastStateEpoch = e.metrics.epoch;
-    s.history.push(e.metrics, e.params);
+    // A previewed past state is shown everywhere but must not be added to the history.
+    if (!e.preview) s.history.push(e.metrics, e.params);
     set({
       live: {
         params: e.params,
@@ -163,10 +188,14 @@ export const useLab = create<LabState>()((set, get) => {
         running: e.running,
         boundary: e.boundary ?? s.live.boundary,
         boundaryRes: e.boundary ? e.boundaryRes : s.live.boundaryRes,
+        gradMean: e.gradMean,
+        preview: e.preview,
         epochsPerSecond: eps,
         tick: s.live.tick + 1,
       },
       historyTick: s.historyTick + 1,
+      ...(e.timeline ? { timeline: e.timeline } : {}),
+      ...(!e.preview && s.previewTarget !== null && e.running ? { previewTarget: null } : {}),
     });
   };
 
@@ -185,6 +214,10 @@ export const useLab = create<LabState>()((set, get) => {
     speed: 50,
     camera: null,
     error: null,
+    timeline: [],
+    previewTarget: null,
+    resumes: 0,
+    showPulses: true,
     advancedOpen: false,
     drawMode: false,
     drawClass: 1,
@@ -203,10 +236,19 @@ export const useLab = create<LabState>()((set, get) => {
     },
     play: () => client?.send({ type: 'play' }),
     pause: () => client?.send({ type: 'pause' }),
-    togglePlay: () => (get().live.running ? get().pause() : get().play()),
-    step: () => client?.send({ type: 'step', epochs: 1 }),
+    togglePlay: () => {
+      const s = get();
+      if (s.live.preview) s.resumeFromPreview(true);
+      else if (s.live.running) s.pause();
+      else s.play();
+    },
+    step: () => {
+      if (get().live.preview) get().resumeFromPreview(false);
+      client?.send({ type: 'step', epochs: 1 });
+    },
     reset: () => {
       get().history.clear();
+      set({ previewTarget: null });
       client?.send({ type: 'reset' });
     },
     newSeed() {
@@ -277,6 +319,40 @@ export const useLab = create<LabState>()((set, get) => {
       }
     },
     setDrawClass: (drawClass) => set({ drawClass }),
+    setShowPulses: (showPulses) => set({ showPulses }),
+    previewSnapshot: (id) => {
+      set({ previewTarget: id });
+      client?.send({ type: 'preview', id });
+    },
+    exitPreview: () => {
+      set({ previewTarget: null });
+      client?.send({ type: 'exitPreview' });
+    },
+    resumeFromPreview(play) {
+      const p = get().live.preview;
+      if (!p) return;
+      get().history.truncate(p.epoch);
+      set({ resumes: get().resumes + 1, previewTarget: null });
+      client?.send({ type: 'resume', id: p.id, play });
+    },
+    stepSnapshot(dir) {
+      const { timeline, live, previewTarget } = get();
+      if (timeline.length === 0) return;
+      // Use the requested target so quick repeated presses keep moving before the worker replies.
+      const viewing = previewTarget ?? live.preview?.id ?? null;
+      const found = viewing === null ? -1 : timeline.findIndex((m) => m.id === viewing);
+      const cur = found >= 0 ? found : timeline.length - 1;
+      // From the live run, "back" first goes to the newest snapshot strictly before now.
+      let k = cur + dir;
+      if (found < 0 && dir === -1 && timeline[cur].epoch < (live.metrics?.epoch ?? 0)) k = cur;
+      if (found < 0 && dir === 1) return;
+      if (k < 0) k = 0;
+      if (k >= timeline.length) {
+        get().exitPreview();
+        return;
+      }
+      get().previewSnapshot(timeline[k].id);
+    },
   };
 });
 

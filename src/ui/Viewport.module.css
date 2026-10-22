@@ -271,3 +271,77 @@
     opacity: 0.3;
   }
 }
+
+.timeBanner {
+  position: absolute;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 6px 6px 8px;
+  border-radius: 999px;
+  background: rgba(0, 102, 204, 0.94);
+  color: #fff;
+  font-size: 13px;
+  white-space: nowrap;
+  box-shadow: var(--shadow-float);
+  animation: rise 220ms var(--ease);
+  z-index: 6;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+}
+
+.timeBanner .icon {
+  width: 28px;
+  height: 28px;
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.timeBanner .icon:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.timeBanner .icon:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.timeBanner .divider {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.resume {
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 0;
+  background: #fff;
+  color: var(--link);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.backNow {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 0;
+  background: none;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.backNow:hover {
+  background: rgba(255, 255, 255, 0.16);
+}

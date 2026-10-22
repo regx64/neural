@@ -238,6 +238,9 @@ function ChartCard() {
         <span>
           <i style={{ borderColor: CHART_COLORS.test, borderTopStyle: 'dashed' }} /> 검증
         </span>
+        <span className={styles.chartHint}>
+          <Term id="timeTravel">곡선을 눌러 과거 보기</Term>
+        </span>
       </div>
     </Card>
   );
@@ -248,6 +251,8 @@ function AdvancedSettings() {
   const hyper = useLab((s) => s.config.hyper);
   const features = useLab((s) => s.config.network.features);
   const open = useLab((s) => s.advancedOpen);
+  const showPulses = useLab((s) => s.showPulses);
+  const setShowPulses = useLab.getState().setShowPulses;
   const { setDataset, setHyper, setNetwork, newSeed, setAdvancedOpen } = useLab.getState();
   const toggleFeature = (id: FeatureId) => {
     const has = features.includes(id);
@@ -346,6 +351,10 @@ function AdvancedSettings() {
           ))}
         </div>
       </Field>
+      <label className={styles.toggle}>
+        <input type="checkbox" checked={showPulses} onChange={(e) => setShowPulses(e.target.checked)} />
+        신호 흐름 애니메이션
+      </label>
       <button type="button" className={styles.link} onClick={newSeed}>
         새 데이터와 가중치 생성
       </button>

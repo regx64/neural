@@ -13,7 +13,11 @@ interface LessonState {
   exit(): void;
 }
 
-const freshCtx = (): StepContext => ({ sawReset: false });
+const freshCtx = (): StepContext => ({
+  sawReset: false,
+  seen: [],
+  resumesAtStart: useLab.getState().resumes,
+});
 
 function enterStep(lesson: Lesson, step: number) {
   if (lesson.steps[step]?.openAdvanced) useLab.getState().setAdvancedOpen(true);
@@ -45,7 +49,12 @@ useLab.subscribe((s) => {
   const { lesson, step, completed, ctx } = useLesson.getState();
   if (!lesson) return;
   const st = lesson.steps[step];
-  if ((s.live.metrics?.epoch ?? 0) === 0) ctx.sawReset = true;
+  if (s.live.preview) {
+    if (!ctx.seen.includes(s.live.preview.id)) ctx.seen.push(s.live.preview.id);
+  } else {
+    // Only the live run counts as progress; a previewed past state does not.
+    if ((s.live.metrics?.epoch ?? 0) === 0) ctx.sawReset = true;
+  }
   if (!st.done || completed.has(step)) return;
   if (st.done(s, ctx)) useLesson.setState({ completed: new Set(completed).add(step) });
 });
