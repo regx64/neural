@@ -1,0 +1,85 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(245, 245, 247, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.card {
+  width: min(420px, 100%);
+  padding: 24px;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: var(--shadow-float);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 21px;
+}
+
+.card h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.card dl {
+  margin: 0;
+}
+
+.card dl div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-top: 1px solid var(--separator);
+  font-size: 14px;
+}
+
+.card dt {
+  display: flex;
+  gap: 4px;
+}
+
+.card dd {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.card kbd {
+  min-width: 24px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--fill);
+  font-family: var(--font);
+  font-size: 12px;
+  text-align: center;
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--fill);
+  color: var(--text-secondary);
+  cursor: pointer;
+}

@@ -7,6 +7,7 @@ import { activationScales, liveModel, liveTrace, responseMap } from '@state/deri
 import { useLab, type LabState, type Target } from '@state/store';
 import {
   CSS_COLORS,
+  signText,
   formatNumber,
   formatSigned,
   neuronColor,
@@ -87,7 +88,7 @@ function NeuronView({
           입력 뉴런은 계산하지 않고, 점의 <b>{featureLabel(s.config.network.features[index])}</b> 값을 다음
           층의 모든 뉴런에 그대로 전달해요.
         </p>
-        <Result rows={[{ label: '입력값', value: formatSigned(value), color: signColor(value) }]} />
+        <Result rows={[{ label: '입력값', value: formatSigned(value), color: signText(value) }]} />
         <table className={styles.table}>
           <thead>
             <tr>
@@ -135,7 +136,7 @@ function NeuronView({
         {isOutput ? (
           <>
             이 입력을{' '}
-            <b style={{ color: signColor(b.a - 0.5) }}>
+            <b style={{ color: signText(b.a - 0.5) }}>
               {b.a >= 0.5 ? '파란 점(클래스 1)' : '주황 점(클래스 0)'}
             </b>
             으로 판단해요. 확신도 {formatNumber((b.a >= 0.5 ? b.a : 1 - b.a) * 100, 0)}%.
@@ -144,7 +145,7 @@ function NeuronView({
           <>이 입력에서는 거의 반응하지 않아요.</>
         ) : (
           <>
-            이 입력에서 <b style={{ color: signColor(sv) }}>{sv > 0 ? '+쪽(파랑)' : '−쪽(주황)'}</b>으로
+            이 입력에서 <b style={{ color: signText(sv) }}>{sv > 0 ? '+쪽(파랑)' : '−쪽(주황)'}</b>으로
             반응해요.
           </>
         )}{' '}
@@ -214,7 +215,7 @@ function NeuronView({
           {
             label: `a = ${activationFormula(act)}`,
             value: formatSigned(b.a),
-            color: signColor(isOutput ? b.a - 0.5 : b.a),
+            color: signText(isOutput ? b.a - 0.5 : b.a),
             testId: 'inspector-a',
           },
           ...(isOutput
@@ -336,15 +337,15 @@ function EdgeView({
     <>
       <Result
         rows={[
-          { label: '가중치 w', value: formatSigned(w), color: signColor(w) },
+          { label: '가중치 w', value: formatSigned(w), color: signText(w) },
           { label: '입력 활성화 a', value: formatSigned(a) },
-          { label: '기여도 w·a', value: formatSigned(w * a), color: signColor(w * a) },
+          { label: '기여도 w·a', value: formatSigned(w * a), color: signText(w * a) },
           ...(s.live.gradMean
             ? [
                 {
                   label: '최근 변화 방향 −∂L/∂w',
                   value: formatSigned(-s.live.gradMean[pi], 4),
-                  color: signColor(-s.live.gradMean[pi]),
+                  color: signText(-s.live.gradMean[pi]),
                 },
               ]
             : []),

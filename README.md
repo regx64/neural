@@ -12,6 +12,8 @@ NEURAL은 인공신경망을 3D 공간에서 탐험하고, 직접 학습시키�
 | [01-product-spec.md](docs/01-product-spec.md)         | 제품 명세: 원칙, 페르소나, 화면 구성, 기능별 수용 기준, 시각 인코딩 규칙, 릴리스 범위, 성공 지표 |
 | [02-technical-design.md](docs/02-technical-design.md) | 기술 설계: 스택 결정, 아키텍처, 엔진·워커·렌더링 설계, 테스트 전략                               |
 | [03-development-plan.md](docs/03-development-plan.md) | 제작 계획: 마일스톤 M0~M8, 일정, 완료 조건, 리스크 관리                                          |
+| [04-usability-test.md](docs/04-usability-test.md)     | v1.0 출시 전 사용성 테스트 키트 (과제·지표·기록 양식·실기기 FPS 측정)                            |
+| [CHANGELOG.md](CHANGELOG.md)                          | 변경 기록                                                                                        |
 
 ## 실행
 
@@ -24,7 +26,7 @@ npm run dev          # http://localhost:5173 (랜딩) · /learn/ (배우기) · 
 | ------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | `npm run build`                                               | 타입 검사 후 정적 빌드(`dist/`). `BASE_PATH=/neural/`로 하위 경로 배포 |
 | `npm test`                                                    | 단위 테스트 (엔진 기울기 검사·결정론·수렴, 시각 인코딩, 레이아웃)      |
-| `npm run test:e2e`                                            | Playwright E2E (빌드 후 미리보기 서버에서 실행)                        |
+| `npm run test:e2e`                                            | Playwright E2E + axe 접근성 검사 (빌드 후 미리보기 서버에서 실행)      |
 | `npm run lint` · `npm run typecheck` · `npm run format:check` | 정적 검사                                                              |
 
 브라우저를 내려받을 수 없는 환경에서는 `PW_CHROMIUM_PATH=/path/to/chromium npm run test:e2e`로 설치된 Chromium을 사용한다.
@@ -53,7 +55,8 @@ src/
 - [x] **입문자 경험** — 배우기 페이지(뉴런 놀이터·손실 골짜기), 가이드 레슨 6종, 첫 방문 투어, 용어 툴팁, 상태 문장
 - [x] **v0.2 Lab** (M5~M6) — 데이터 직접 편집, 뉴런 응답 맵, 자동 저장, 신호 흐름, 변화(기울기) 모드, Time Travel
 - [x] **M7** — 실험 저장·URL 공유, 역전파 인스펙터, A/B 비교, 분기 보존, 모바일 레이아웃
-- [ ] **v1.0 Public** (M8) — 시각 완성도, 접근성·성능 점검, OG 이미지, 사용성 테스트
+- [x] **M8 / 1.0.0-rc.1** — 접근성(WCAG AA·키보드·스크린리더), 안정성, 3D 지연 로딩, 공유 미리보기
+- [ ] **1.0.0** — 사용성 테스트 5명 + 실기기 FPS 측정 ([04-usability-test.md](docs/04-usability-test.md))
 
 자세한 진행 기록은 [03-development-plan.md §6](docs/03-development-plan.md#6-진행-기록)을 참고한다.
 

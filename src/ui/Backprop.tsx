@@ -2,13 +2,13 @@ import { activateDerivative } from '@core/nn/activations';
 import { weightIndex, type Model } from '@core/nn/model';
 import { backwardTrace, type Trace } from '@core/nn/trace';
 import type { LabState, Target } from '@state/store';
-import { CSS_COLORS, formatNumber, formatSigned } from '@viz/encoding';
+import { formatNumber, formatSigned, signText } from '@viz/encoding';
 import { Segmented } from './controls';
 import { Term } from './Term';
 import styles from './Inspector.module.css';
 
 const TOP = 8;
-const signColor = (v: number) => (v >= 0 ? CSS_COLORS.positive : CSS_COLORS.negative);
+const signColor = signText;
 
 /**
  * The label backprop should aim for: the cycled sample's own label, or for a clicked point the

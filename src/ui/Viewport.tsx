@@ -3,17 +3,21 @@ import { weightIndex } from '@core/nn/model';
 import { activationScales, liveModel, liveTrace } from '@state/derived';
 import { useLab, type EdgeMode } from '@state/store';
 import type { Speed } from '@worker/protocol';
-import { CSS_COLORS, formatNumber, formatSigned } from '@viz/encoding';
-import { NetworkScene } from '@viz/three/NetworkScene';
+import { CSS_COLORS, formatNumber, formatSigned, signText } from '@viz/encoding';
 import { layerName } from '@viz/three/sceneRefs';
 import { edgeMax, edgeValue } from '@viz/edgeValue';
 import { Segmented } from './controls';
 import { useLiveTick } from './hooks';
 import { PauseIcon, PlayIcon, ResetIcon, StepIcon } from './icons';
+import { lazy, Suspense, useState } from 'react';
+import { ErrorBoundary } from './ErrorBoundary';
 import { Inspector } from './Inspector';
 import { Term } from './Term';
 import { narrate } from '../content/narration';
 import styles from './Viewport.module.css';
+
+// three.js is most of the lab's JavaScript; load it in parallel so the panels are usable first.
+const NetworkScene = lazy(() => import('@viz/three/NetworkScene').then((m) => ({ default: m.NetworkScene })));
 
 const SPEEDS: { value: Speed; label: string }[] = [
   { value: 5, label: '느리게' },
@@ -288,7 +292,7 @@ function Tooltip() {
       {rows.map(([k, v]) => (
         <div key={k} className={styles.tipRow}>
           <span>{k}</span>
-          <span className="num" style={{ color: v >= 0 ? CSS_COLORS.positive : CSS_COLORS.negative }}>
+          <span className="num" style={{ color: signText(v) }}>
             {formatSigned(v)}
           </span>
         </div>
@@ -297,18 +301,97 @@ function Tooltip() {
   );
 }
 
+/** Screen readers: announce what got selected (not every value update — that would be noise). */
+function SelectionAnnouncer() {
+  const selection = useLab((s) => s.selection);
+  let text = '';
+  if (selection) {
+    const s = useLab.getState();
+    const count = s.config.network.hidden.length + 2;
+    const name = (l: number, j: number) =>
+      l === 0
+        ? featureLabel(s.config.network.features[j])
+        : l === count - 1
+          ? '출력 뉴런'
+          : `${layerName(l, count)}의 ${j + 1}번 뉴런`;
+    text =
+      selection.kind === 'neuron'
+        ? `${name(selection.layer, selection.index)} 선택됨. 계산 내용은 인스펙터에 있어요.`
+        : `${name(selection.layer - 1, selection.from)}에서 ${name(selection.layer, selection.to)}로 가는 연결 선택됨.`;
+  }
+  return (
+    <p className="sr-only" aria-live="polite">
+      {text}
+    </p>
+  );
+}
+
 function ErrorBanner() {
   const error = useLab((s) => s.error);
   if (!error) return null;
-  return <div className={styles.error}>학습 워커 오류: {error}</div>;
+  return (
+    <div className={styles.error} role="alert">
+      학습 중 문제가 생겼어요: {error}
+      <button
+        type="button"
+        onClick={() => {
+          useLab.setState({ error: null });
+          useLab.getState().connect();
+        }}
+      >
+        다시 시작
+      </button>
+    </div>
+  );
+}
+
+function ViewFailure({ retry, reason }: { retry: () => void; reason: 'crash' | 'lost' }) {
+  return (
+    <div className={styles.failure} role="alert">
+      <h2>3D 화면을 다시 그려야 해요</h2>
+      <p>
+        {reason === 'lost'
+          ? '그래픽 장치가 잠시 연결을 잃었어요(절전 모드나 다른 탭 때문일 수 있어요).'
+          : '화면을 그리는 중 오류가 났어요.'}{' '}
+        학습 상태와 설정은 그대로예요.
+      </p>
+      <button type="button" onClick={retry}>
+        다시 그리기
+      </button>
+    </div>
+  );
 }
 
 export function Viewport() {
   const hasHover = useLab((s) => s.hover !== null);
+  const [lost, setLost] = useState(false);
+  const [canvasKey, setCanvasKey] = useState(0);
   return (
     <main className={styles.wrap}>
-      <div className={styles.viewport} style={{ cursor: hasHover ? 'pointer' : 'grab' }} data-tour="viewport">
-        <NetworkScene />
+      <div
+        className={styles.viewport}
+        style={{ cursor: hasHover ? 'pointer' : 'grab' }}
+        data-tour="viewport"
+        role="region"
+        aria-label="3D 신경망. [ 와 ] 키로 뉴런을 하나씩 선택하고, ? 키로 단축키를 볼 수 있어요."
+        tabIndex={0}
+      >
+        {lost ? (
+          <ViewFailure
+            reason="lost"
+            retry={() => {
+              setLost(false);
+              setCanvasKey((k) => k + 1);
+            }}
+          />
+        ) : (
+          <ErrorBoundary fallback={(retry) => <ViewFailure reason="crash" retry={retry} />}>
+            <Suspense fallback={<p className={styles.loading}>3D 화면을 준비하는 중…</p>}>
+              <NetworkScene key={canvasKey} onContextLost={() => setLost(true)} />
+            </Suspense>
+          </ErrorBoundary>
+        )}
+        <SelectionAnnouncer />
         <div className={styles.topLeft}>
           <Stats />
           <Narration />

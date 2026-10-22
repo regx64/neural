@@ -24,6 +24,17 @@ export const CSS_COLORS = {
   ink: '#1d1d1f',
 };
 
+/**
+ * Darker variants for *text* in the data colours: the graphic orange is only 3.2:1 on white,
+ * below WCAG AA for small text. Both of these are ≥ 4.5:1 on white and on #f5f5f7.
+ */
+export const TEXT_COLORS = {
+  positive: '#0066cc',
+  negative: '#b35600',
+};
+
+export const signText = (v: number) => (v >= 0 ? TEXT_COLORS.positive : TEXT_COLORS.negative);
+
 const clamp1 = (v: number) => (v > 1 ? 1 : v < -1 ? -1 : Number.isFinite(v) ? v : 0);
 
 /**

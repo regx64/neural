@@ -135,6 +135,10 @@ export interface LabState {
   resumeFromPreview(play: boolean): void;
   /** Move the preview to the previous (−1) or next (+1) snapshot. */
   stepSnapshot(dir: -1 | 1): void;
+  /** Keyboard selection: the previous (−1) / next (+1) neuron in input → output order. */
+  selectAdjacentNeuron(dir: -1 | 1): void;
+  shortcutsOpen: boolean;
+  setShortcutsOpen(open: boolean): void;
 }
 
 let client: TrainerClient | null = null;
@@ -388,6 +392,23 @@ export const useLab = create<LabState>()((set, get) => {
     },
     setDrawClass: (drawClass) => set({ drawClass }),
     setShowPulses: (showPulses) => set({ showPulses }),
+    selectAdjacentNeuron(dir) {
+      const { selection, config } = get();
+      const sizes = layerSizesOf(config);
+      const flat: [number, number][] = [];
+      sizes.forEach((n, l) => {
+        for (let j = 0; j < n; j++) flat.push([l, j]);
+      });
+      let k = -1;
+      if (selection?.kind === 'neuron')
+        k = flat.findIndex(([l, j]) => l === selection.layer && j === selection.index);
+      else if (selection?.kind === 'edge')
+        k = flat.findIndex(([l, j]) => l === selection.layer && j === selection.to);
+      const next = k < 0 ? (dir === 1 ? 0 : flat.length - 1) : (k + dir + flat.length) % flat.length;
+      set({ selection: { kind: 'neuron', layer: flat[next][0], index: flat[next][1] } });
+    },
+    shortcutsOpen: false,
+    setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
     previewSnapshot: (id) => {
       set({ previewTarget: id });
       client?.send({ type: 'preview', id });

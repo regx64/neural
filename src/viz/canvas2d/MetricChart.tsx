@@ -74,7 +74,7 @@ function draw(
 
   // Grid and labels.
   ctx.font = '10px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
-  ctx.fillStyle = '#86868b';
+  ctx.fillStyle = '#707075';
   ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)';
   ctx.lineWidth = 1;
   ctx.textAlign = 'right';

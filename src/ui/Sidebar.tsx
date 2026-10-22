@@ -376,6 +376,9 @@ function AdvancedSettings() {
       <button type="button" className={styles.link} onClick={newSeed}>
         새 데이터와 가중치 생성
       </button>
+      <button type="button" className={styles.link} onClick={() => useLab.getState().setShortcutsOpen(true)}>
+        키보드 단축키 보기 (?)
+      </button>
     </Disclosure>
   );
 }

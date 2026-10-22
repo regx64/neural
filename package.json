@@ -1,7 +1,7 @@
 {
   "name": "neural",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0-rc.1",
   "type": "module",
   "description": "NEURAL — interactive neural network lab. Don't just use AI. See how it thinks.",
   "scripts": {
@@ -25,6 +25,7 @@
     "zustand": "^5.0.16"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.64.1",
     "@types/node": "^22.20.5",

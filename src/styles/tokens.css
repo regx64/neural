@@ -8,8 +8,10 @@
 
   --text: #1d1d1f;
   --text-secondary: #6e6e73;
-  --text-tertiary: #86868b;
+  --text-tertiary: #707075; /* 4.9:1 on white, 4.5:1 on --bg (WCAG AA) */
   --link: #0066cc;
+  --positive-text: #0066cc;
+  --negative-text: #b35600;
 
   /* Data colours — see docs/01-product-spec.md §5 and src/viz/encoding.ts. */
   --positive: #0071e3;

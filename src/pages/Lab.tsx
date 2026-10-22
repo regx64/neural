@@ -6,6 +6,7 @@ import { Viewport } from '@ui/Viewport';
 import { Welcome } from '@ui/Welcome';
 import { useLesson } from '@state/lesson';
 import { readSharedConfig, SHARE_PARAM } from '@state/share';
+import { Shortcuts } from '@ui/Shortcuts';
 import { Toast } from '@ui/Toast';
 import styles from './Lab.module.css';
 
@@ -45,13 +46,21 @@ function useKeyboardShortcuts() {
           s.requestCamera({ kind: 'preset', preset: Number(e.key) as 1 | 2 | 3 });
           break;
         case 'Escape':
-          if (s.live.preview) s.exitPreview();
+          if (s.shortcutsOpen) s.setShortcutsOpen(false);
+          else if (s.live.preview) s.exitPreview();
           else s.select(null);
           break;
         case 'ArrowLeft':
         case 'ArrowRight':
           e.preventDefault();
           s.stepSnapshot(e.key === 'ArrowLeft' ? -1 : 1);
+          break;
+        case '[':
+        case ']':
+          s.selectAdjacentNeuron(e.key === '[' ? -1 : 1);
+          break;
+        case '?':
+          s.setShortcutsOpen(!s.shortcutsOpen);
           break;
       }
     };
@@ -100,6 +109,7 @@ export function Lab() {
       <NavBar />
       <Welcome suppressed={!!lessonParam || sharedLink} />
       <Toast />
+      <Shortcuts />
       <Sidebar />
       {webgl ? (
         <Viewport />
