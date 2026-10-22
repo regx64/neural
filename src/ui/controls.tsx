@@ -1,24 +1,40 @@
-import type { ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { MinusIcon, PlusIcon } from './icons';
 import styles from './controls.module.css';
 
-export function Section({
+export function Card({
   title,
-  children,
+  subtitle,
   aside,
+  children,
+  testId,
 }: {
   title: string;
-  children: ReactNode;
+  subtitle?: ReactNode;
   aside?: ReactNode;
+  children: ReactNode;
+  testId?: string;
 }) {
   return (
-    <section className={styles.section}>
-      <header className={styles.sectionHeader}>
-        <h2>{title}</h2>
+    <section className={styles.card} data-testid={testId}>
+      <header className={styles.cardHeader}>
+        <div>
+          <h2>{title}</h2>
+          {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
+        </div>
         {aside}
       </header>
       {children}
     </section>
+  );
+}
+
+export function Row({ label, children }: { label: ReactNode; children: ReactNode }) {
+  return (
+    <div className={styles.row}>
+      <span className={styles.rowLabel}>{label}</span>
+      {children}
+    </div>
   );
 }
 
@@ -117,7 +133,7 @@ export function Stepper({
       >
         <MinusIcon width={12} height={12} />
       </button>
-      <span className="mono">{value}</span>
+      <span className="num">{value}</span>
       <button
         type="button"
         aria-label={`${label} 늘리기`}
@@ -135,14 +151,20 @@ export function Segmented<T extends string>({
   options,
   onChange,
   label,
+  stretch = false,
 }: {
   value: T;
   options: { value: T; label: string; title?: string }[];
   onChange: (v: T) => void;
   label: string;
+  stretch?: boolean;
 }) {
   return (
-    <div className={styles.segmented} role="radiogroup" aria-label={label}>
+    <div
+      className={stretch ? `${styles.segmented} ${styles.stretch}` : styles.segmented}
+      role="radiogroup"
+      aria-label={label}
+    >
       {options.map((o) => (
         <button
           key={o.value}
@@ -160,22 +182,41 @@ export function Segmented<T extends string>({
   );
 }
 
-export function ButtonGroup({
-  options,
-  onClick,
-  label,
-}: {
-  options: { value: string; label: string; title?: string }[];
-  onClick: (v: string) => void;
-  label: string;
-}) {
+/** A collapsible group, closed by default — keeps rarely used settings out of sight. */
+export function Disclosure({ title, children }: { title: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
   return (
-    <div className={styles.segmented} role="group" aria-label={label}>
-      {options.map((o) => (
-        <button key={o.value} type="button" title={o.title} onClick={() => onClick(o.value)}>
-          {o.label}
-        </button>
-      ))}
-    </div>
+    <section className={styles.disclosure}>
+      <button
+        type="button"
+        className={styles.disclosureButton}
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen(!open)}
+      >
+        {title}
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          aria-hidden
+          className={open ? styles.chevronOpen : undefined}
+        >
+          <path
+            d="M4 2.5 7.5 6 4 9.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+        </svg>
+      </button>
+      {open && (
+        <div id={id} className={styles.disclosureBody}>
+          {children}
+        </div>
+      )}
+    </section>
   );
 }

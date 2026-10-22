@@ -13,7 +13,7 @@ export function NetworkScene() {
       gl={{ antialias: true, powerPreference: 'high-performance' }}
       data-testid="network-canvas"
     >
-      <color attach="background" args={['#05070d']} />
+      <color attach="background" args={['#ffffff']} />
       <Network />
       <Labels />
       <Interaction />

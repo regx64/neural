@@ -1,129 +1,211 @@
-.viewport {
+.wrap {
   grid-area: view;
-  position: relative;
   min-width: 0;
   min-height: 0;
+  padding: 12px 12px 12px 0;
+}
+
+.viewport {
+  position: relative;
+  height: 100%;
   overflow: hidden;
-  background: radial-gradient(ellipse at 50% 40%, #0a1020 0%, var(--bg-viewport) 70%);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
 }
 
 .viewport canvas {
   touch-action: none;
 }
 
-.toolbar {
+.stats {
   position: absolute;
-  top: 12px;
-  left: 12px;
-  right: 12px;
+  top: 22px;
+  left: 26px;
+  margin: 0;
   display: flex;
-  justify-content: space-between;
+  gap: 36px;
   pointer-events: none;
 }
 
-.toolbar > * {
-  pointer-events: auto;
-  background: var(--bg-panel);
-  backdrop-filter: blur(6px);
+.stats dt {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.stats dd {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.stats .sub {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--text-tertiary);
+}
+
+.player {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-radius: 999px;
+  box-shadow: var(--shadow-float);
+  white-space: nowrap;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 0;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 150ms var(--ease);
+}
+
+.icon:hover {
+  background: var(--fill);
+}
+
+.play {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--text);
+  color: #fff;
+  cursor: pointer;
+  transition: transform 150ms var(--ease);
+}
+
+.play:hover {
+  transform: scale(1.05);
+}
+
+.play:active {
+  transform: scale(0.97);
+}
+
+.divider {
+  width: 1px;
+  height: 22px;
+  background: var(--separator);
+  margin: 0 4px;
+}
+
+.speed {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.speed:hover {
+  background: var(--fill);
 }
 
 .legend {
   position: absolute;
-  left: 12px;
-  bottom: 12px;
+  left: 26px;
+  bottom: 30px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 10px 12px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  gap: 3px;
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text-tertiary);
   pointer-events: none;
-  backdrop-filter: blur(6px);
 }
 
-.legendRow {
+.legend div {
   display: flex;
+  gap: 12px;
+}
+
+.legend span {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
-.legendRow .mono {
-  color: var(--text-dim);
-  margin-left: 4px;
-}
-
-.swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  margin-left: 4px;
-}
-
-.swatch:first-child {
-  margin-left: 0;
-}
-
-.lineDemo {
-  width: 18px;
-  height: 0;
-  border-top: 3px solid var(--positive);
-  border-radius: 2px;
-  opacity: 0.8;
-}
-
-.dotDemo {
-  width: 10px;
-  height: 10px;
+.legend i {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--positive), transparent 75%);
-  margin: 0 4px;
 }
 
-.ringDemo {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 1.5px solid var(--negative);
-  margin: 0 4px;
+.hint {
+  position: absolute;
+  right: 26px;
+  bottom: 30px;
+  margin: 0;
+  max-width: 200px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  pointer-events: none;
 }
 
 .tooltip {
   position: absolute;
-  min-width: 140px;
-  padding: 8px 10px;
-  background: rgba(11, 15, 26, 0.96);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
+  min-width: 150px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-float);
   pointer-events: none;
-  font-size: 12px;
+  font-size: 13px;
   z-index: 20;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .tipTitle {
-  color: var(--text-strong);
+  font-weight: 600;
   margin-bottom: 4px;
-  font-weight: 500;
 }
 
 .tipRow {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .error {
   position: absolute;
-  top: 60px;
+  top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 8px 14px;
-  border-radius: var(--radius-sm);
-  background: rgba(127, 29, 29, 0.9);
-  color: #fecaca;
-  font-size: 12px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #fff1f0;
+  color: #c4170c;
+  font-size: 13px;
+  box-shadow: var(--shadow-card);
+}
+
+@media (max-width: 1180px) {
+  .hint {
+    display: none;
+  }
 }

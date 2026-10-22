@@ -5,9 +5,9 @@ import styles from './canvas2d.module.css';
 
 export type ChartKind = 'loss' | 'accuracy';
 
-const TRAIN = '#e2e8f0';
-const TEST = '#a78bfa';
-const PAD = { left: 40, right: 10, top: 8, bottom: 18 };
+const TRAIN = '#1d1d1f';
+const TEST = '#86868b';
+const PAD = { left: 34, right: 4, top: 6, bottom: 16 };
 
 function niceEpochTicks(max: number): number[] {
   if (max <= 0) return [0];
@@ -56,18 +56,18 @@ function draw(canvas: HTMLCanvasElement, h: History, kind: ChartKind, log: boole
   const xOf = (e: number) => PAD.left + ((e - minEpoch) / (maxEpoch - minEpoch)) * plotW;
 
   // Grid and labels.
-  ctx.font = '10px "JetBrains Mono", monospace';
-  ctx.fillStyle = '#64748b';
-  ctx.strokeStyle = 'rgba(148, 163, 184, 0.1)';
+  ctx.font = '10px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
+  ctx.fillStyle = '#86868b';
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)';
   ctx.lineWidth = 1;
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
   const yTicks =
     kind === 'accuracy'
-      ? [0, 0.25, 0.5, 0.75, 1]
+      ? [0, 0.5, 1]
       : log
         ? Array.from({ length: Math.floor(hi) - Math.ceil(lo) + 1 }, (_, k) => 10 ** (Math.ceil(lo) + k))
-        : [0, hi / 4, hi / 2, (3 * hi) / 4, hi];
+        : [0, hi / 2, hi];
   for (const t of yTicks) {
     const y = yOf(t);
     ctx.beginPath();
@@ -85,8 +85,8 @@ function draw(canvas: HTMLCanvasElement, h: History, kind: ChartKind, log: boole
   // Series.
   series.forEach((values, s) => {
     ctx.strokeStyle = s === 0 ? TRAIN : TEST;
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash(s === 0 ? [] : [4, 3]);
+    ctx.lineWidth = s === 0 ? 1.75 : 1.25;
+    ctx.setLineDash(s === 0 ? [] : [3, 3]);
     ctx.beginPath();
     let started = false;
     for (let k = 0; k < n; k++) {

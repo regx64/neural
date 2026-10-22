@@ -1,4 +1,4 @@
-/** Lit sphere with a soft rim; colour comes per instance from `instanceColor`. */
+/** Softly lit sphere with a slightly darker rim so pale neurons stay defined on white. */
 export const neuronShader = {
   vertexShader: /* glsl */ `
     varying vec3 vNormal;
@@ -18,19 +18,17 @@ export const neuronShader = {
     varying vec3 vColor;
     void main() {
       vec3 n = normalize(vNormal);
-      float ndl = max(dot(n, normalize(vec3(0.4, 0.6, 1.0))), 0.0);
-      float rim = pow(1.0 - max(dot(n, normalize(vView)), 0.0), 2.5);
-      vec3 c = vColor * (0.5 + 0.5 * ndl) + vColor * rim * 0.8 + vec3(0.04, 0.05, 0.08) * rim;
+      float ndl = max(dot(n, normalize(vec3(0.3, 0.6, 1.0))), 0.0);
+      float rim = pow(1.0 - max(dot(n, normalize(vView)), 0.0), 2.0);
+      vec3 c = vColor * (0.86 + 0.14 * ndl);
+      c = mix(c, vColor * 0.72, rim * 0.7);
       gl_FragColor = vec4(c, 1.0);
     }
   `,
 };
 
-/**
- * Camera-facing quad drawn at each instance's position, sized by the instance scale.
- * `uRing` = 0 draws a soft glow, 1 draws an annulus between uInner and uOuter (in quad radii).
- */
-export const billboardShader = {
+/** Camera-facing annulus between uInner and uOuter (in quad radii), sized by the instance scale. */
+export const ringShader = {
   vertexShader: /* glsl */ `
     varying vec2 vUv;
     varying vec3 vColor;
@@ -43,17 +41,14 @@ export const billboardShader = {
     }
   `,
   fragmentShader: /* glsl */ `
-    uniform float uRing;
     uniform float uInner;
     uniform float uOuter;
     varying vec2 vUv;
     varying vec3 vColor;
     void main() {
       float r = length(vUv);
-      float glow = exp(-r * r * 5.0) * (1.0 - smoothstep(0.85, 1.0, r));
-      float ring = smoothstep(uInner - 0.05, uInner, r) * (1.0 - smoothstep(uOuter, uOuter + 0.05, r));
-      float a = mix(glow, ring, uRing);
-      if (a < 0.003) discard;
+      float a = smoothstep(uInner - 0.04, uInner, r) * (1.0 - smoothstep(uOuter, uOuter + 0.04, r));
+      if (a < 0.01) discard;
       gl_FragColor = vec4(vColor, a);
     }
   `,

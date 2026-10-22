@@ -64,16 +64,14 @@ test('clicking a hidden neuron shows its computation, consistent with a = tanh(z
   const a = await num('inspector-a');
   expect(Math.abs(Math.tanh(z) - a)).toBeLessThan(2e-3);
   await page.keyboard.press('Escape');
-  await expect(page.getByTestId('inspector-title')).toHaveText('모델 요약');
+  await expect(page.getByTestId('inspector')).toHaveCount(0);
 });
 
-test('changing the architecture updates the model summary', async ({ page }) => {
+test('changing the architecture updates the network summary', async ({ page }) => {
   await page.getByRole('button', { name: '은닉층 수 늘리기' }).click();
   await page.getByRole('button', { name: '은닉 2 뉴런 수 늘리기' }).click();
-  const inspector = page.getByTestId('inspector');
-  await expect(inspector).toContainText('2 – 4 – 5 – 1');
-  // 2·4+4 + 4·5+5 + 5·1+1
-  await expect(inspector).toContainText('43');
+  // 2·4+4 + 4·5+5 + 5·1+1 = 43
+  await expect(page.getByTestId('network-card')).toContainText('2 – 4 – 5 – 1 · 파라미터 43개');
 });
 
 test('clicking the data plot pins the probe input', async ({ page }) => {

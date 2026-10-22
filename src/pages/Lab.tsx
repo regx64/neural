@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLab } from '@state/store';
-import { BottomPanel } from '@ui/BottomPanel';
-import { Inspector } from '@ui/Inspector';
-import { LeftPanel } from '@ui/LeftPanel';
-import { TopBar } from '@ui/TopBar';
+import { NavBar } from '@ui/NavBar';
+import { Sidebar } from '@ui/Sidebar';
 import { Viewport } from '@ui/Viewport';
 import styles from './Lab.module.css';
 
@@ -69,8 +67,8 @@ export function Lab() {
 
   return (
     <div className={styles.lab}>
-      <TopBar />
-      <LeftPanel />
+      <NavBar />
+      <Sidebar />
       {webgl ? (
         <Viewport />
       ) : (
@@ -79,8 +77,6 @@ export function Lab() {
           <p>최신 Chrome, Edge, Firefox, Safari에서 하드웨어 가속을 켜고 다시 시도해 주세요.</p>
         </main>
       )}
-      <Inspector />
-      <BottomPanel />
     </div>
   );
 }

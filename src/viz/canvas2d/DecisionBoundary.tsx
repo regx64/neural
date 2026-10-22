@@ -10,7 +10,7 @@ function draw(canvas: HTMLCanvasElement, s: LabState, scratch: { img?: HTMLCanva
   const W = canvas.width;
   const H = canvas.height;
   const dpr = W / canvas.clientWidth || 1;
-  ctx.fillStyle = '#0b0f1a';
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
 
   const { boundary, boundaryRes: res } = s.live;
@@ -28,7 +28,7 @@ function draw(canvas: HTMLCanvasElement, s: LabState, scratch: { img?: HTMLCanva
 
     // p = 0.5 decision boundary.
     const segs = isoLines(boundary, res, 0.5);
-    ctx.strokeStyle = 'rgba(248, 250, 252, 0.75)';
+    ctx.strokeStyle = 'rgba(29, 29, 31, 0.5)';
     ctx.lineWidth = 1.25 * dpr;
     ctx.beginPath();
     const sx = W / res;
@@ -41,7 +41,7 @@ function draw(canvas: HTMLCanvasElement, s: LabState, scratch: { img?: HTMLCanva
   }
 
   // Axes through the origin.
-  ctx.strokeStyle = 'rgba(148, 163, 184, 0.14)';
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)';
   ctx.lineWidth = dpr;
   ctx.beginPath();
   ctx.moveTo(W / 2, 0);
@@ -53,7 +53,7 @@ function draw(canvas: HTMLCanvasElement, s: LabState, scratch: { img?: HTMLCanva
   const { dataset } = s;
   const px = (x: number) => ((x + 1) / 2) * W;
   const py = (y: number) => ((1 - y) / 2) * H;
-  const r = 3.2 * dpr;
+  const r = 3 * dpr;
   const drawPoint = (idx: number, filled: boolean) => {
     const color = dataset.labels[idx] === 1 ? CSS_COLORS.positive : CSS_COLORS.negative;
     ctx.beginPath();
@@ -61,7 +61,7 @@ function draw(canvas: HTMLCanvasElement, s: LabState, scratch: { img?: HTMLCanva
     if (filled) {
       ctx.fillStyle = color;
       ctx.fill();
-      ctx.strokeStyle = 'rgba(5, 7, 13, 0.8)';
+      ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = dpr;
       ctx.stroke();
     } else {
@@ -77,7 +77,7 @@ function draw(canvas: HTMLCanvasElement, s: LabState, scratch: { img?: HTMLCanva
   if (pt) {
     const x = px(pt[0]);
     const y = py(pt[1]);
-    ctx.strokeStyle = 'rgba(248, 250, 252, 0.35)';
+    ctx.strokeStyle = 'rgba(29, 29, 31, 0.2)';
     ctx.lineWidth = dpr;
     ctx.setLineDash([3 * dpr, 3 * dpr]);
     ctx.beginPath();
@@ -87,7 +87,7 @@ function draw(canvas: HTMLCanvasElement, s: LabState, scratch: { img?: HTMLCanva
     ctx.lineTo(W, y);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.strokeStyle = '#f8fafc';
+    ctx.strokeStyle = CSS_COLORS.ink;
     ctx.lineWidth = 2 * dpr;
     ctx.beginPath();
     ctx.arc(x, y, 7 * dpr, 0, Math.PI * 2);

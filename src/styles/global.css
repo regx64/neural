@@ -14,11 +14,12 @@ body,
 }
 
 body {
-  background: var(--bg-viewport);
+  background: var(--bg);
   color: var(--text);
-  font-family: var(--font-ui);
-  font-size: 13px;
-  line-height: 1.45;
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.43;
+  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -27,15 +28,15 @@ select,
 input {
   font: inherit;
   color: inherit;
+  letter-spacing: inherit;
 }
 
 :focus-visible {
-  outline: 2px solid var(--brand-text);
+  outline: 2px solid var(--link);
   outline-offset: 2px;
 }
 
-.mono {
-  font-family: var(--font-mono);
+.num {
   font-variant-numeric: tabular-nums;
 }
 

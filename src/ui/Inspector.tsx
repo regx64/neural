@@ -1,6 +1,6 @@
 import { featureLabel } from '@core/data/features';
 import { activationFormula } from '@core/nn/activations';
-import { buildLayout, weightIndex, type Model } from '@core/nn/model';
+import { weightIndex, type Model } from '@core/nn/model';
 import { neuronBreakdown, type Trace } from '@core/nn/trace';
 import { liveModel, liveTrace } from '@state/derived';
 import { useLab, type LabState, type Target } from '@state/store';
@@ -30,16 +30,18 @@ function Bar({ value, max }: { value: number; max: number }) {
   );
 }
 
-function ProbeHeader({ s }: { s: LabState }) {
-  const pt = s.probe.point;
+function Result({ rows }: { rows: { label: string; value: string; color?: string; testId?: string }[] }) {
   return (
-    <div className={styles.probe}>
-      입력{' '}
-      <span className="mono">
-        {pt ? `(x₁, x₂) = (${formatSigned(pt[0], 2)}, ${formatSigned(pt[1], 2)})` : '—'}
-      </span>
-      {s.probe.auto && <span className={styles.auto}>샘플 순회</span>}
-    </div>
+    <dl className={styles.result}>
+      {rows.map((r) => (
+        <div key={r.label}>
+          <dt>{r.label}</dt>
+          <dd className="num" style={r.color ? { color: r.color } : undefined} data-testid={r.testId}>
+            {r.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -61,25 +63,21 @@ function NeuronView({
   if (layer === 0) {
     // Input neuron: show its value and where it sends signal.
     const L = model.layers[0];
+    const value = trace.a[0][index];
     const outs = Array.from({ length: L.outSize }, (_, j) => {
       const w = model.params[weightIndex(L, j, index)];
-      return { to: j, weight: w, contribution: w * trace.a[0][index] };
+      return { to: j, weight: w, contribution: w * value };
     }).sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
     const max = Math.max(...outs.map((o) => Math.abs(o.contribution)), 1e-9);
     return (
       <>
-        <div className={styles.formula}>
-          <span>{featureLabel(s.config.network.features[index])}</span> ={' '}
-          <b className="mono" style={{ color: signColor(trace.a[0][index]) }}>
-            {formatSigned(trace.a[0][index])}
-          </b>
-        </div>
+        <Result rows={[{ label: '입력값', value: formatSigned(value), color: signColor(value) }]} />
         <table className={styles.table}>
           <thead>
             <tr>
               <th>보내는 곳</th>
-              <th>가중치</th>
-              <th>기여도</th>
+              <th>w</th>
+              <th>w·a</th>
               <th />
             </tr>
           </thead>
@@ -91,8 +89,8 @@ function NeuronView({
                 onMouseLeave={() => setHover(null)}
               >
                 <td>{neuronLabel(s, 1, o.to)}</td>
-                <td className="mono">{formatSigned(o.weight)}</td>
-                <td className="mono">{formatSigned(o.contribution)}</td>
+                <td className="num">{formatSigned(o.weight)}</td>
+                <td className="num">{formatSigned(o.contribution)}</td>
                 <td>
                   <Bar value={o.contribution} max={max} />
                 </td>
@@ -115,15 +113,15 @@ function NeuronView({
 
   return (
     <>
-      <div className={styles.formula}>
-        z = Σ wᵢ·aᵢ + b <span className={styles.dim}>· {act}</span>
-      </div>
+      <p className={styles.formula}>
+        z = Σ w·a + b<span>{act}</span>
+      </p>
       <table className={styles.table} data-testid="breakdown">
         <thead>
           <tr>
             <th>입력</th>
-            <th>값 a</th>
-            <th>가중치 w</th>
+            <th>a</th>
+            <th>w</th>
             <th>w·a</th>
             <th />
           </tr>
@@ -136,69 +134,59 @@ function NeuronView({
               onMouseLeave={() => setHover(null)}
             >
               <td>{neuronLabel(s, layer - 1, r.from)}</td>
-              <td className="mono">{formatSigned(r.value)}</td>
-              <td className="mono">{formatSigned(r.weight)}</td>
-              <td className="mono">{formatSigned(r.contribution)}</td>
+              <td className="num">{formatSigned(r.value)}</td>
+              <td className="num">{formatSigned(r.weight)}</td>
+              <td className="num">{formatSigned(r.contribution)}</td>
               <td>
                 <Bar value={r.contribution} max={max} />
               </td>
             </tr>
           ))}
           {rest.length > 0 && (
-            <tr className={styles.rest}>
-              <td colSpan={3}>나머지 {rest.length}개 합계</td>
-              <td className="mono">{formatSigned(restSum)}</td>
+            <tr className={styles.muted}>
+              <td colSpan={3}>나머지 {rest.length}개</td>
+              <td className="num">{formatSigned(restSum)}</td>
               <td>
                 <Bar value={restSum} max={max} />
               </td>
             </tr>
           )}
-          <tr className={styles.biasRow}>
+          <tr className={styles.muted}>
             <td colSpan={3}>편향 b</td>
-            <td className="mono">{formatSigned(b.bias)}</td>
+            <td className="num">{formatSigned(b.bias)}</td>
             <td>
               <Bar value={b.bias} max={max} />
             </td>
           </tr>
         </tbody>
       </table>
-      <div className={styles.result}>
-        <div>
-          <span>z</span>
-          <b className="mono" data-testid="inspector-z">
-            {formatSigned(b.z)}
-          </b>
-        </div>
-        <div>
-          <span>a = {activationFormula(act)}</span>
-          <b
-            className="mono"
-            style={{ color: signColor(isOutput ? b.a - 0.5 : b.a) }}
-            data-testid="inspector-a"
-          >
-            {formatSigned(b.a)}
-          </b>
-        </div>
-        {isOutput && (
-          <div>
-            <span>예측</span>
-            <b>
-              클래스 {b.a >= 0.5 ? 1 : 0}{' '}
-              <span className={styles.dim}>
-                ({formatNumber((b.a >= 0.5 ? b.a : 1 - b.a) * 100, 1)}% 확신)
-              </span>
-            </b>
-          </div>
-        )}
-      </div>
+      <Result
+        rows={[
+          { label: 'z', value: formatSigned(b.z), testId: 'inspector-z' },
+          {
+            label: `a = ${activationFormula(act)}`,
+            value: formatSigned(b.a),
+            color: signColor(isOutput ? b.a - 0.5 : b.a),
+            testId: 'inspector-a',
+          },
+          ...(isOutput
+            ? [
+                {
+                  label: '예측',
+                  value: `클래스 ${b.a >= 0.5 ? 1 : 0} · ${formatNumber((b.a >= 0.5 ? b.a : 1 - b.a) * 100, 1)}%`,
+                },
+              ]
+            : []),
+        ]}
+      />
     </>
   );
 }
 
 function Sparkline({ values }: { values: number[] }) {
-  if (values.length < 2) return <div className={styles.sparkEmpty}>학습을 진행하면 변화가 기록됩니다.</div>;
+  if (values.length < 2) return <p className={styles.hint}>학습을 진행하면 변화가 기록됩니다.</p>;
   const W = 260;
-  const H = 48;
+  const H = 44;
   const min = Math.min(...values, 0);
   const max = Math.max(...values, 0);
   const span = max - min || 1;
@@ -213,7 +201,7 @@ function Sparkline({ values }: { values: number[] }) {
       preserveAspectRatio="none"
       aria-label="가중치 변화"
     >
-      <line x1={0} x2={W} y1={zero} y2={zero} stroke="var(--border-strong)" strokeDasharray="3 3" />
+      <line x1={0} x2={W} y1={zero} y2={zero} stroke="#d2d2d7" strokeDasharray="3 3" />
       <polyline points={pts} fill="none" stroke={signColor(values[values.length - 1])} strokeWidth={1.5} />
     </svg>
   );
@@ -235,132 +223,66 @@ function EdgeView({
   const w = model.params[pi];
   const a = trace.a[t.layer - 1][t.from];
   const h = s.history;
-  const history = h.params.map((p) => p[pi]);
-  const first = h.paramEpochs[0];
   return (
     <>
-      <div className={styles.edgePath}>
-        <span>{neuronLabel(s, t.layer - 1, t.from)}</span>
-        <span className={styles.arrow}>→</span>
-        <span>{neuronLabel(s, t.layer, t.to)}</span>
+      <Result
+        rows={[
+          { label: '가중치 w', value: formatSigned(w), color: signColor(w) },
+          { label: '입력 활성화 a', value: formatSigned(a) },
+          { label: '기여도 w·a', value: formatSigned(w * a), color: signColor(w * a) },
+        ]}
+      />
+      <div>
+        <h3 className={styles.subhead}>
+          가중치 변화
+          {h.paramEpochs.length > 1 && (
+            <span className="num">
+              {' '}
+              · epoch {h.paramEpochs[0]}–{h.paramEpochs[h.paramEpochs.length - 1]}
+            </span>
+          )}
+        </h3>
+        <Sparkline values={h.params.map((p) => p[pi])} />
       </div>
-      <div className={styles.result}>
-        <div>
-          <span>가중치 w</span>
-          <b className="mono" style={{ color: signColor(w) }}>
-            {formatSigned(w)}
-          </b>
-        </div>
-        <div>
-          <span>입력 활성화 a</span>
-          <b className="mono">{formatSigned(a)}</b>
-        </div>
-        <div>
-          <span>기여도 w·a</span>
-          <b className="mono" style={{ color: signColor(w * a) }}>
-            {formatSigned(w * a)}
-          </b>
-        </div>
-      </div>
-      <h3 className={styles.subhead}>
-        가중치 변화{' '}
-        {h.paramEpochs.length > 1 && (
-          <span className={styles.dim}>
-            epoch {first} → {h.paramEpochs[h.paramEpochs.length - 1]}
-          </span>
-        )}
-      </h3>
-      <Sparkline values={history} />
     </>
   );
 }
 
-function Summary({ s }: { s: LabState }) {
-  const sizes = [s.config.network.features.length, ...s.config.network.hidden, 1];
-  const { paramCount } = buildLayout({
-    inputSize: sizes[0],
-    hidden: s.config.network.hidden,
-    activation: s.config.network.activation,
-  });
-  return (
-    <>
-      <p className={styles.hint}>3D 뷰에서 뉴런이나 연결을 클릭하면 계산 과정을 보여 줍니다.</p>
-      <div className={styles.result}>
-        <div>
-          <span>구조</span>
-          <b className="mono">{sizes.join(' – ')}</b>
-        </div>
-        <div>
-          <span>파라미터</span>
-          <b className="mono">{paramCount.toLocaleString()}</b>
-        </div>
-        <div>
-          <span>활성화 함수</span>
-          <b className="mono">{s.config.network.activation}</b>
-        </div>
-        <div>
-          <span>손실 함수</span>
-          <b className="mono">binary cross-entropy</b>
-        </div>
-      </div>
-      <h3 className={styles.subhead}>단축키</h3>
-      <ul className={styles.keys}>
-        <li>
-          <kbd>Space</kbd> 학습 / 일시정지
-        </li>
-        <li>
-          <kbd>.</kbd> 1 에폭 진행 · <kbd>R</kbd> 초기화
-        </li>
-        <li>
-          <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> 정면 · 측면 · 등각 보기
-        </li>
-        <li>
-          <kbd>Esc</kbd> 선택 해제 · 더블클릭 포커스
-        </li>
-      </ul>
-    </>
-  );
-}
-
+/** Floating card with the selected neuron's or weight's computation. Hidden when nothing is selected. */
 export function Inspector() {
   useLiveTick(12);
   const selection = useLab((st) => st.selection);
+  if (!selection) return null;
   const s = useLab.getState();
   const model = liveModel(s);
   const trace = liveTrace(s);
+  const pt = s.probe.point;
 
-  let title = '모델 요약';
-  if (selection?.kind === 'neuron') title = neuronLabel(s, selection.layer, selection.index);
-  if (selection?.kind === 'edge') title = '연결';
+  const title =
+    selection.kind === 'neuron'
+      ? neuronLabel(s, selection.layer, selection.index)
+      : `${neuronLabel(s, selection.layer - 1, selection.from)} → ${neuronLabel(s, selection.layer, selection.to)}`;
 
   return (
     <aside className={styles.panel} aria-label="계산 인스펙터" data-testid="inspector">
       <header className={styles.header}>
         <div>
-          <div className={styles.kicker}>
-            {selection ? (selection.kind === 'neuron' ? '뉴런' : '가중치') : 'Inspector'}
-          </div>
           <h2 data-testid="inspector-title">{title}</h2>
+          <p className="num">
+            입력 {pt ? `(${formatSigned(pt[0], 2)}, ${formatSigned(pt[1], 2)})` : '—'}
+            {s.probe.auto && ' · 샘플 순회 중'}
+          </p>
         </div>
-        {selection && (
-          <button
-            type="button"
-            className={styles.close}
-            onClick={() => s.select(null)}
-            aria-label="선택 해제"
-          >
-            <CloseIcon />
-          </button>
-        )}
+        <button type="button" className={styles.close} onClick={() => s.select(null)} aria-label="선택 해제">
+          <CloseIcon width={14} height={14} />
+        </button>
       </header>
       <div className={styles.body}>
-        {selection && <ProbeHeader s={s} />}
-        {!selection && <Summary s={s} />}
-        {selection && (!model || !trace) && <p className={styles.hint}>모델을 불러오는 중…</p>}
-        {selection?.kind === 'neuron' && model && trace && (
+        {(!model || !trace) && <p className={styles.hint}>모델을 불러오는 중…</p>}
+        {selection.kind === 'neuron' && model && trace && (
           <NeuronView s={s} model={model} trace={trace} t={selection} />
         )}
-        {selection?.kind === 'edge' && model && trace && (
+        {selection.kind === 'edge' && model && trace && (
           <EdgeView s={s} model={model} trace={trace} t={selection} />
         )}
       </div>

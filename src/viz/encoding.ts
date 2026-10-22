@@ -9,17 +9,19 @@ export type RGB = [number, number, number];
 const hex = (h: number): RGB => [((h >> 16) & 255) / 255, ((h >> 8) & 255) / 255, (h & 255) / 255];
 
 export const COLORS = {
-  positive: hex(0x22d3ee),
-  negative: hex(0xf97316),
-  neutral: hex(0x64748b),
-  brand: hex(0x7c3aed),
+  positive: hex(0x0071e3),
+  negative: hex(0xf56300),
+  neutral: hex(0x86868b),
+  /** Resting neuron colour (|a| = 0) on the light background. */
+  idle: hex(0xe8e8ed),
+  ink: hex(0x1d1d1f),
 };
 
 export const CSS_COLORS = {
-  positive: '#22d3ee',
-  negative: '#f97316',
-  neutral: '#64748b',
-  brand: '#7c3aed',
+  positive: '#0071e3',
+  negative: '#f56300',
+  neutral: '#86868b',
+  ink: '#1d1d1f',
 };
 
 const clamp1 = (v: number) => (v > 1 ? 1 : v < -1 ? -1 : Number.isFinite(v) ? v : 0);
@@ -39,14 +41,17 @@ export function signedActivation(a: number, activation: ActivationId | 'input', 
   }
 }
 
-/** Neuron colour: dim neutral at 0, blending to cyan (+) / orange (−) with |s|. */
+/** Neuron colour: light grey at 0, blending to blue (+) / orange (−) with |s|. */
 export function neuronColor(s: number, out: RGB = [0, 0, 0]): RGB {
   const t = Math.abs(clamp1(s));
   const target = s >= 0 ? COLORS.positive : COLORS.negative;
-  for (let k = 0; k < 3; k++) {
-    const base = COLORS.neutral[k] * 0.35;
-    out[k] = base + (target[k] - base) * t;
-  }
+  for (let k = 0; k < 3; k++) out[k] = COLORS.idle[k] + (target[k] - COLORS.idle[k]) * t;
+  return out;
+}
+
+/** Mixes `color` toward white by (1 − t) — how faded elements are drawn on the light background. */
+export function fadeToWhite(color: RGB, t: number, out: RGB = [0, 0, 0]): RGB {
+  for (let k = 0; k < 3; k++) out[k] = 1 + (color[k] - 1) * t;
   return out;
 }
 
@@ -68,7 +73,7 @@ export function edgeStyle(v: number, maxAbs: number): EdgeStyle {
   return {
     t,
     width: EDGE_MIN_WIDTH + (EDGE_MAX_WIDTH - EDGE_MIN_WIDTH) * t,
-    alpha: t < 0.05 ? 0.03 + t * 2 : 0.08 + 0.92 * t,
+    alpha: t < 0.05 ? 0.04 + t * 2 : 0.12 + 0.83 * t,
     positive: v >= 0,
   };
 }
@@ -77,8 +82,8 @@ export function edgeStyle(v: number, maxAbs: number): EdgeStyle {
 export function boundaryRGBA(p: number, out: Uint8ClampedArray, offset: number): void {
   const s = clamp1((p - 0.5) * 2);
   const target = s >= 0 ? COLORS.positive : COLORS.negative;
-  const bg = [0.043, 0.059, 0.102]; // panel background #0B0F1A
-  const t = Math.abs(s) * 0.55;
+  const bg = [1, 1, 1];
+  const t = Math.abs(s) * 0.22;
   for (let k = 0; k < 3; k++) out[offset + k] = Math.round((bg[k] + (target[k] - bg[k]) * t) * 255);
   out[offset + 3] = 255;
 }

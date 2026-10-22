@@ -1,35 +1,32 @@
 :root {
-  --bg-viewport: #05070d;
-  --bg-panel: rgba(11, 15, 26, 0.92);
-  --bg-panel-solid: #0b0f1a;
-  --bg-raised: #121829;
-  --bg-hover: #1a2236;
-  --border: #1e293b;
-  --border-strong: #334155;
+  /* Surfaces — light, Apple-style. */
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --fill: rgba(0, 0, 0, 0.04);
+  --fill-hover: rgba(0, 0, 0, 0.07);
+  --separator: rgba(0, 0, 0, 0.08);
 
-  --text: #e2e8f0;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
-  --text-strong: #f8fafc;
-
-  --brand: #7c3aed;
-  --brand-soft: rgba(124, 58, 237, 0.18);
-  --brand-text: #a78bfa;
+  --text: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #86868b;
+  --link: #0066cc;
 
   /* Data colours — see docs/01-product-spec.md §5 and src/viz/encoding.ts. */
-  --positive: #22d3ee;
-  --negative: #f97316;
-  --neutral: #64748b;
+  --positive: #0071e3;
+  --negative: #f56300;
+  --neutral: #86868b;
 
-  --font-ui:
-    'Inter', 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
-    'Noto Sans KR', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Apple SD Gothic Neo',
+    'Pretendard Variable', Pretendard, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-mono: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
 
-  --radius: 8px;
-  --radius-sm: 6px;
-  --panel-width: 320px;
-  --topbar-height: 56px;
-  --bottom-height: 168px;
-  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --radius-lg: 18px;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
+  --shadow-float: 0 4px 12px rgba(0, 0, 0, 0.06), 0 16px 40px rgba(0, 0, 0, 0.1);
+  --sidebar-width: 304px;
+  --nav-height: 48px;
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
 }

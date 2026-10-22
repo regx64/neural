@@ -28,8 +28,7 @@ describe('encoding', () => {
   it('colours: full magnitude reaches the sign colour', () => {
     neuronColor(1).forEach((c, k) => expect(c).toBeCloseTo(COLORS.positive[k], 9));
     neuronColor(-1).forEach((c, k) => expect(c).toBeCloseTo(COLORS.negative[k], 9));
-    const zero = neuronColor(0);
-    expect(zero[0]).toBeCloseTo(COLORS.neutral[0] * 0.35);
+    neuronColor(0).forEach((c, k) => expect(c).toBeCloseTo(COLORS.idle[k], 9));
   });
 
   it('edges scale monotonically with |v| and clamp to the max', () => {
@@ -44,9 +43,9 @@ describe('encoding', () => {
     boundaryRGBA(0.5, px, 0);
     boundaryRGBA(1, px, 4);
     boundaryRGBA(0, px, 8);
-    expect(Array.from(px.slice(0, 4))).toEqual([11, 15, 26, 255]);
-    expect(px[6]).toBeGreaterThan(px[2]); // p = 1 → more blue (cyan)
-    expect(px[8]).toBeGreaterThan(px[0]); // p = 0 → more red (orange)
+    expect(Array.from(px.slice(0, 4))).toEqual([255, 255, 255, 255]);
+    expect(px[4]).toBeLessThan(px[6]); // p = 1 → tinted blue (less red than blue)
+    expect(px[10]).toBeLessThan(px[8]); // p = 0 → tinted orange (less blue than red)
   });
 
   it('formats signed numbers', () => {

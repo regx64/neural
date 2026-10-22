@@ -2,36 +2,124 @@ import { featureLabel } from '@core/data/features';
 import { weightIndex } from '@core/nn/model';
 import { activationScales, liveModel, liveTrace } from '@state/derived';
 import { useLab, type EdgeMode } from '@state/store';
-import { CSS_COLORS, formatSigned } from '@viz/encoding';
+import type { Speed } from '@worker/protocol';
+import { CSS_COLORS, formatNumber, formatSigned } from '@viz/encoding';
 import { NetworkScene } from '@viz/three/NetworkScene';
 import { layerName } from '@viz/three/sceneRefs';
-import { ButtonGroup, Segmented } from './controls';
+import { Segmented } from './controls';
 import { useLiveTick } from './hooks';
+import { PauseIcon, PlayIcon, ResetIcon, StepIcon } from './icons';
+import { Inspector } from './Inspector';
 import styles from './Viewport.module.css';
 
-function Toolbar() {
-  const edgeMode = useLab((s) => s.edgeMode);
-  const { setEdgeMode, requestCamera } = useLab.getState();
+const SPEEDS: { value: Speed; label: string }[] = [
+  { value: 5, label: '느리게' },
+  { value: 15, label: '천천히' },
+  { value: 50, label: '보통' },
+  { value: 150, label: '빠르게' },
+  { value: 'max', label: '최대' },
+];
+
+const pct = (v: number | undefined) =>
+  v === undefined || !Number.isFinite(v) ? '—' : `${(v * 100).toFixed(1)}%`;
+
+function Stats() {
+  useLiveTick(15);
+  const { metrics } = useLab.getState().live;
+  const stats = [
+    { label: 'Epoch', value: metrics ? metrics.epoch.toLocaleString() : '0', id: 'epoch' },
+    {
+      label: '손실',
+      value: metrics ? formatNumber(metrics.trainLoss) : '—',
+      id: 'train-loss',
+      sub: metrics ? formatNumber(metrics.testLoss) : '—',
+      subId: 'test-loss',
+    },
+    {
+      label: '정확도',
+      value: pct(metrics?.trainAccuracy),
+      id: 'train-acc',
+      sub: pct(metrics?.testAccuracy),
+      subId: 'test-acc',
+    },
+  ];
   return (
-    <div className={styles.toolbar}>
+    <dl className={styles.stats}>
+      {stats.map((m) => (
+        <div key={m.id}>
+          <dt>{m.label}</dt>
+          <dd className="num" data-testid={`metric-${m.id}`}>
+            {m.value}
+          </dd>
+          {m.subId && (
+            <dd className={`num ${styles.sub}`}>
+              검증 <span data-testid={`metric-${m.subId}`}>{m.sub}</span>
+            </dd>
+          )}
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function Player() {
+  const running = useLab((s) => s.live.running);
+  const speed = useLab((s) => s.speed);
+  const edgeMode = useLab((s) => s.edgeMode);
+  const { togglePlay, step, reset, setSpeed, setEdgeMode } = useLab.getState();
+  return (
+    <div className={styles.player} role="toolbar" aria-label="학습 제어">
+      <button
+        type="button"
+        className={styles.icon}
+        onClick={reset}
+        title="초기화 (R)"
+        aria-label="가중치 초기화"
+      >
+        <ResetIcon width={17} height={17} />
+      </button>
+      <button
+        type="button"
+        className={styles.play}
+        onClick={togglePlay}
+        aria-label={running ? '일시정지' : '학습 시작'}
+        title={running ? '일시정지 (Space)' : '학습 시작 (Space)'}
+        data-testid="play"
+      >
+        {running ? <PauseIcon width={18} height={18} /> : <PlayIcon width={18} height={18} />}
+      </button>
+      <button
+        type="button"
+        className={styles.icon}
+        onClick={step}
+        title="1 에폭 (.)"
+        aria-label="1 에폭 진행"
+      >
+        <StepIcon width={17} height={17} />
+      </button>
+      <span className={styles.divider} />
       <Segmented<EdgeMode>
         label="연결선 표시"
         value={edgeMode}
         onChange={setEdgeMode}
         options={[
-          { value: 'weight', label: '가중치 w', title: '연결선 = 가중치' },
-          { value: 'contribution', label: '기여도 w·a', title: '연결선 = 현재 입력에 대한 기여도' },
+          { value: 'weight', label: '가중치', title: '연결선 = 가중치 w' },
+          { value: 'contribution', label: '기여도', title: '연결선 = 현재 입력의 기여도 w·a' },
         ]}
       />
-      <ButtonGroup
-        label="카메라 프리셋"
-        onClick={(v) => requestCamera({ kind: 'preset', preset: Number(v) as 1 | 2 | 3 })}
-        options={[
-          { value: '1', label: '정면', title: '정면 보기 (1)' },
-          { value: '2', label: '측면', title: '측면 보기 (2)' },
-          { value: '3', label: '등각', title: '등각 보기 (3)' },
-        ]}
-      />
+      <span className={styles.divider} />
+      <select
+        className={styles.speed}
+        aria-label="학습 속도"
+        value={String(speed)}
+        onChange={(e) => setSpeed(e.target.value === 'max' ? 'max' : Number(e.target.value))}
+      >
+        {SPEEDS.map((o) => (
+          <option key={String(o.value)} value={String(o.value)}>
+            {o.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
@@ -57,31 +145,28 @@ function Legend() {
   const hiddenScale = unbounded && scales.length > 2 ? Math.max(...scales.slice(1, -1)) : null;
   return (
     <div className={styles.legend} aria-label="범례">
-      <div className={styles.legendRow}>
-        <span className={styles.swatch} style={{ background: CSS_COLORS.positive }} /> 양수
-        <span className={styles.swatch} style={{ background: CSS_COLORS.negative }} /> 음수
-      </div>
-      <div className={styles.legendRow}>
-        <span className={styles.lineDemo} />
-        {s.edgeMode === 'weight' ? '두께·밝기 = |w|' : '두께·밝기 = |w·a|'}
-        <span className="mono">max {max.toFixed(2)}</span>
-      </div>
-      <div className={styles.legendRow}>
-        <span className={styles.dotDemo} />
-        뉴런 밝기 = |a|
-        <span className="mono">
-          {act === 'tanh'
-            ? '[−1, 1]'
-            : act === 'sigmoid'
-              ? '[0, 1]'
-              : `p95 ${hiddenScale?.toFixed(2) ?? '—'}`}
+      <div>
+        <span>
+          <i style={{ background: CSS_COLORS.positive }} />
+          양수
+        </span>
+        <span>
+          <i style={{ background: CSS_COLORS.negative }} />
+          음수
         </span>
       </div>
-      <div className={styles.legendRow}>
-        <span className={styles.ringDemo} /> 링 = 편향 b
+      <div className="num">
+        굵기 |{s.edgeMode === 'weight' ? 'w' : 'w·a'}| · 최대 {max.toFixed(2)}
+        {unbounded && ` · 활성화 p95 ${hiddenScale?.toFixed(2) ?? '—'}`}
       </div>
     </div>
   );
+}
+
+function Hint() {
+  const hasSelection = useLab((s) => s.selection !== null);
+  if (hasSelection) return null;
+  return <p className={styles.hint}>뉴런이나 연결을 클릭하면 계산 과정을 볼 수 있습니다.</p>;
 }
 
 function Tooltip() {
@@ -121,7 +206,7 @@ function Tooltip() {
       {rows.map(([k, v]) => (
         <div key={k} className={styles.tipRow}>
           <span>{k}</span>
-          <span className="mono" style={{ color: v >= 0 ? CSS_COLORS.positive : CSS_COLORS.negative }}>
+          <span className="num" style={{ color: v >= 0 ? CSS_COLORS.positive : CSS_COLORS.negative }}>
             {formatSigned(v)}
           </span>
         </div>
@@ -139,12 +224,17 @@ function ErrorBanner() {
 export function Viewport() {
   const hasHover = useLab((s) => s.hover !== null);
   return (
-    <main className={styles.viewport} style={{ cursor: hasHover ? 'pointer' : 'grab' }}>
-      <NetworkScene />
-      <Toolbar />
-      <Legend />
-      <Tooltip />
-      <ErrorBanner />
+    <main className={styles.wrap}>
+      <div className={styles.viewport} style={{ cursor: hasHover ? 'pointer' : 'grab' }}>
+        <NetworkScene />
+        <Stats />
+        <Inspector />
+        <Legend />
+        <Hint />
+        <Player />
+        <Tooltip />
+        <ErrorBanner />
+      </div>
     </main>
   );
 }

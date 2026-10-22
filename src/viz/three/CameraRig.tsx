@@ -12,6 +12,8 @@ interface Controls {
 
 const DURATION = 0.7;
 const FOCUS_DISTANCE = 6;
+/** Half the inspector card width (+ margin): the scene slides left by this much while it is open. */
+const INSPECTOR_SHIFT = 172;
 
 export function viewDistance(): number {
   const layout = sceneRefs.layout;
@@ -35,6 +37,8 @@ const ease = (t: number) => 1 - (1 - t) ** 3;
 /** Animates the camera to preset views and focus targets requested through the store. */
 export function CameraRig() {
   const camera = useThree((s) => s.camera);
+  const size = useThree((s) => s.size);
+  const shift = useRef(0);
   const controls = useThree((s) => s.controls) as unknown as Controls | null;
   const request = useLab((s) => s.camera);
   const anim = useRef<{
@@ -77,6 +81,20 @@ export function CameraRig() {
   }, [request, camera, controls]);
 
   useFrame((_, dt) => {
+    // Slide the rendered view so the network stays clear of the floating inspector.
+    const target = useLab.getState().selection ? INSPECTOR_SHIFT : 0;
+    shift.current += (target - shift.current) * (1 - Math.exp(-dt * 10));
+    if (Math.abs(target - shift.current) < 0.5) shift.current = target;
+    const pc = camera as typeof camera & {
+      view?: { enabled: boolean } | null;
+      setViewOffset?: (...a: number[]) => void;
+      clearViewOffset?: () => void;
+    };
+    // Re-applied every frame while shifted so it follows canvas resizes.
+    if (shift.current !== 0)
+      pc.setViewOffset?.(size.width, size.height, shift.current, 0, size.width, size.height);
+    else if (pc.view?.enabled) pc.clearViewOffset?.();
+
     const a = anim.current;
     if (!a || !controls) return;
     a.t = Math.min(1, a.t + dt / DURATION);

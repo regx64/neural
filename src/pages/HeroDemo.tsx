@@ -73,7 +73,6 @@ export function HeroDemo() {
       const pos = layout.positions;
       let max = 0;
       for (const v of model.params) max = Math.max(max, Math.abs(v));
-      ctx.globalCompositeOperation = 'lighter';
       for (const L of model.layers) {
         for (let j = 0; j < L.outSize; j++)
           for (let i = 0; i < L.inSize; i++) {
@@ -81,23 +80,22 @@ export function HeroDemo() {
             const a = layout.neuronOffsets[L.index - 1] + i;
             const b = layout.neuronOffsets[L.index] + j;
             ctx.strokeStyle = w >= 0 ? CSS_COLORS.positive : CSS_COLORS.negative;
-            ctx.globalAlpha = 0.08 + 0.85 * Math.min(1, Math.abs(w) / max);
-            ctx.lineWidth = (0.5 + 3 * Math.min(1, Math.abs(w) / max)) * (W / 400);
+            ctx.globalAlpha = 0.1 + 0.85 * Math.min(1, Math.abs(w) / max);
+            ctx.lineWidth = (0.6 + 3.4 * Math.min(1, Math.abs(w) / max)) * (W / 400);
             ctx.beginPath();
             ctx.moveTo(sx(pos[a * 3]), sy(pos[a * 3 + 1]));
             ctx.lineTo(sx(pos[b * 3]), sy(pos[b * 3 + 1]));
             ctx.stroke();
           }
       }
-      ctx.globalCompositeOperation = 'source-over';
       ctx.globalAlpha = 1;
       for (let g = 0; g < layout.neuronCount; g++) {
         ctx.beginPath();
-        ctx.arc(sx(pos[g * 3]), sy(pos[g * 3 + 1]), W / 60, 0, Math.PI * 2);
-        ctx.fillStyle = '#1e293b';
+        ctx.arc(sx(pos[g * 3]), sy(pos[g * 3 + 1]), W / 48, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
         ctx.fill();
-        ctx.strokeStyle = '#94a3b8';
-        ctx.lineWidth = W / 400;
+        ctx.strokeStyle = '#d2d2d7';
+        ctx.lineWidth = W / 300;
         ctx.stroke();
       }
     };
@@ -133,7 +131,7 @@ export function HeroDemo() {
       <canvas ref={netRef} className={styles.demoNet} />
       <canvas ref={plotRef} className={styles.demoPlot} />
       <div className={styles.demoCaption}>
-        <span className={styles.live} /> 지금 이 브라우저에서 실제로 학습 중 · 2–5–4–1 tanh · Adam
+        <span className={styles.live} /> 지금 이 브라우저에서 실시간으로 학습 중
       </div>
     </div>
   );
