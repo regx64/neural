@@ -23,8 +23,11 @@ test('a share link reproduces the experiment in another tab', async ({ page, con
   expect(link).toContain('#c=');
 
   const other = await context.newPage();
-  await other.goto(link);
-  await expect(other.getByTestId('toast')).toContainText('공유받은 실험');
+  // The link is decoded once the lab has mounted. Under the software GPU used in CI, the first
+  // WebGL shader compile blocks the main thread for seconds (2–3.5 s measured with parallel
+  // workers), so allow more than the default 5 s before the confirmation appears.
+  await other.goto(link, { waitUntil: 'commit' });
+  await expect(other.getByTestId('toast')).toContainText('공유받은 실험', { timeout: 15_000 });
   await expect(other.getByTestId('network-card')).toContainText('2 – 4 – 4 – 1');
   await expect(other.getByRole('radio', { name: 'ReLU' })).toHaveAttribute('aria-checked', 'true');
 });
