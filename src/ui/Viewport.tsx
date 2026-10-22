@@ -244,6 +244,22 @@ function TimeBanner() {
   );
 }
 
+/** Appears once the learner has turned the network; one tap brings back the front view. */
+function FrontViewChip() {
+  const turned = useLab((s) => s.cameraTurned);
+  const hasSelection = useLab((s) => s.selection !== null);
+  if (!turned || hasSelection) return null;
+  return (
+    <button
+      type="button"
+      className={styles.frontChip}
+      onClick={() => useLab.getState().requestCamera({ kind: 'preset', preset: 1 })}
+    >
+      정면 보기
+    </button>
+  );
+}
+
 function Hint() {
   const hasSelection = useLab((s) => s.selection !== null);
   if (hasSelection) return null;
@@ -398,6 +414,7 @@ export function Viewport() {
         </div>
         <Inspector />
         <TimeBanner />
+        <FrontViewChip />
         <Legend />
         <Hint />
         <Player />

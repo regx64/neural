@@ -7,6 +7,7 @@
 
 .viewport {
   position: relative;
+  container-type: size;
   height: 100%;
   overflow: hidden;
   background: var(--surface);
@@ -351,7 +352,7 @@
 
 @media (max-width: 900px) {
   .wrap {
-    padding: 12px 12px 0;
+    padding: 8px 8px 0;
   }
 
   .topLeft {
@@ -452,4 +453,50 @@
   place-items: center;
   color: var(--text-tertiary);
   font-size: 13px;
+}
+
+/* A short 3D view (phone with a panel open): keep only the essentials on top of it. */
+@container (max-height: 380px) {
+  .narration {
+    display: none;
+  }
+
+  .stats dd {
+    font-size: 17px;
+  }
+
+  .topLeft {
+    top: 10px;
+  }
+}
+
+.frontChip {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-card);
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  animation: rise-chip 200ms var(--ease);
+}
+
+@keyframes rise-chip {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (max-width: 900px) {
+  .frontChip {
+    top: 12px;
+    right: 12px;
+  }
 }

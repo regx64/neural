@@ -87,7 +87,8 @@ export function LossValley() {
           }}
           options={(Object.keys(RATES) as Rate[]).map((r) => ({
             value: r,
-            label: `${RATES[r].label} (${RATES[r].lr})`,
+            label: RATES[r].label,
+            title: `학습률 ${RATES[r].lr}`,
           }))}
         />
         <div className={styles.actions}>
@@ -108,8 +109,8 @@ export function LossValley() {
           : path.length === 1
             ? '공의 위치가 가중치, 높이가 손실이에요. "한 걸음"을 눌러 보세요.'
             : Math.abs(grad(w)) < 0.02
-              ? `${path.length - 1}걸음 만에 바닥에 도착했어요. 손실 ${loss(w).toFixed(3)}`
-              : `${path.length - 1}걸음째 · 손실 ${loss(w).toFixed(3)}`}
+              ? `${path.length - 1}걸음 만에 바닥에 도착했어요. 손실 ${loss(w).toFixed(3)} · 학습률 ${RATES[rate].lr}`
+              : `${path.length - 1}걸음째 · 손실 ${loss(w).toFixed(3)} · 학습률 ${RATES[rate].lr}`}
       </p>
     </div>
   );

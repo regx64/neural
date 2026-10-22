@@ -153,7 +153,69 @@
   align-items: center;
 }
 
+.more {
+  display: none;
+}
+
 .next:disabled {
   background: #d2d2d7;
   cursor: default;
+}
+
+/* Phones: compact and pinned to the top of the sheet, so the 3D view keeps most of the screen
+   and the lesson stays readable while the panel below scrolls to the highlighted control. */
+@media (max-width: 900px) {
+  .card {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 12px 14px 12px;
+    gap: 8px;
+    box-shadow: 0 0 0 1.5px var(--text);
+  }
+
+  .card h2 {
+    margin-top: 0;
+    font-size: 16px;
+  }
+
+  .body {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .task,
+  .taskDone {
+    padding: 8px 10px;
+    font-size: 12.5px;
+  }
+
+  .footer {
+    margin-top: 0;
+  }
+
+  .next {
+    height: 30px;
+  }
+}
+
+@media (max-width: 900px) {
+  .clamp {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .more {
+    display: block;
+    align-self: flex-start;
+    margin-top: -6px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 12px;
+    color: var(--link);
+    cursor: pointer;
+  }
 }

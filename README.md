@@ -20,13 +20,14 @@ NEURAL은 인공신경망을 3D 공간에서 탐험하고, 직접 학습시키�
 ```bash
 npm install
 npm run dev          # http://localhost:5173 (랜딩) · /learn/ (배우기) · /lab/ (연구실)
+npm run dev:phone    # 같은 Wi-Fi의 휴대폰에서 열기 — 터미널에 표시되는 Network 주소로 접속
 ```
 
 | 명령                                                          | 설명                                                                   |
 | ------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | `npm run build`                                               | 타입 검사 후 정적 빌드(`dist/`). `BASE_PATH=/neural/`로 하위 경로 배포 |
 | `npm test`                                                    | 단위 테스트 (엔진 기울기 검사·결정론·수렴, 시각 인코딩, 레이아웃)      |
-| `npm run test:e2e`                                            | Playwright E2E + axe 접근성 검사 (빌드 후 미리보기 서버에서 실행)      |
+| `npm run test:e2e`                                            | Playwright E2E(데스크톱 + iPhone 13·SE) + axe 접근성 검사              |
 | `npm run lint` · `npm run typecheck` · `npm run format:check` | 정적 검사                                                              |
 
 브라우저를 내려받을 수 없는 환경에서는 `PW_CHROMIUM_PATH=/path/to/chromium npm run test:e2e`로 설치된 Chromium을 사용한다.
@@ -57,6 +58,7 @@ src/
 - [x] **M7** — 실험 저장·URL 공유, 역전파 인스펙터, A/B 비교, 분기 보존, 모바일 레이아웃
 - [x] **M8 / 1.0.0-rc.1** — 접근성(WCAG AA·키보드·스크린리더), 안정성, 3D 지연 로딩, 공유 미리보기
 - [x] **1.0.0** — 사용성 테스트·실기기 확인 완료 (진행자 보고: 큰 문제 없음)
+- [x] **1.0.1** — 휴대폰 전용 레이아웃(한 화면 앱, 하단 탭·시트), 모바일 E2E
 
 자세한 진행 기록은 [03-development-plan.md §6](docs/03-development-plan.md#6-진행-기록)을 참고한다.
 

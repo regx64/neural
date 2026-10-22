@@ -54,7 +54,7 @@ function DatasetThumb({ id }: { id: DatasetId }) {
   return <canvas ref={ref} className={styles.thumb} aria-hidden />;
 }
 
-function DataCard() {
+export function DataCard() {
   const datasetId = useLab((s) => s.config.dataset.id);
   const probe = useLab((s) => s.probe);
   const drawMode = useLab((s) => s.drawMode);
@@ -150,7 +150,7 @@ function DataCard() {
   );
 }
 
-function NetworkCard() {
+export function NetworkCard() {
   const network = useLab((s) => s.config.network);
   const { setNetwork } = useLab.getState();
   const sizes = [network.features.length, ...network.hidden, 1];
@@ -211,7 +211,7 @@ function NetworkCard() {
   );
 }
 
-function ChartCard() {
+export function ChartCard() {
   const [kind, setKind] = useState<ChartKind>('loss');
   const pinned = useLab((s) => s.compareA !== null);
   return (
@@ -264,7 +264,7 @@ function ChartCard() {
   );
 }
 
-function AdvancedSettings() {
+export function AdvancedSettings() {
   const dataset = useLab((s) => s.config.dataset);
   const hyper = useLab((s) => s.config.hyper);
   const features = useLab((s) => s.config.network.features);

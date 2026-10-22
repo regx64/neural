@@ -252,15 +252,13 @@
   color: var(--text-secondary);
 }
 
-/* Bottom sheet on small screens so the network stays visible above it. */
+/* Phones: a card across the top of the 3D view; the network slides down below it (CameraRig). */
 @media (max-width: 900px) {
   .panel {
-    position: fixed;
-    top: auto;
+    top: 8px;
     left: 8px;
     right: 8px;
-    bottom: 8px;
     width: auto;
-    max-height: 55vh;
+    max-height: 56%;
   }
 }

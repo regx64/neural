@@ -8,6 +8,8 @@ import { useLesson } from '@state/lesson';
 import { readSharedConfig, SHARE_PARAM } from '@state/share';
 import { Shortcuts } from '@ui/Shortcuts';
 import { Toast } from '@ui/Toast';
+import { useIsMobile } from '@ui/hooksMedia';
+import { MobileSheet, MobileTabBar } from '@ui/MobileSheet';
 import styles from './Lab.module.css';
 
 const PROBE_CYCLE_MS = 1500;
@@ -103,6 +105,13 @@ export function Lab() {
   }, [sharedLink]);
   useKeyboardShortcuts();
   useProbeCycle();
+  const mobile = useIsMobile();
+  useEffect(() => {
+    if (!mobile) return;
+    return useLab.subscribe((st, prev) => {
+      if (st.selection && st.selection !== prev.selection && st.mobileTab) st.setMobileTab(null);
+    });
+  }, [mobile]);
 
   return (
     <div className={styles.lab}>
@@ -110,7 +119,7 @@ export function Lab() {
       <Welcome suppressed={!!lessonParam || sharedLink} />
       <Toast />
       <Shortcuts />
-      <Sidebar />
+      {mobile ? null : <Sidebar />}
       {webgl ? (
         <Viewport />
       ) : (
@@ -118,6 +127,12 @@ export function Lab() {
           <p>이 브라우저에서는 WebGL 2를 사용할 수 없어 3D 뷰를 표시할 수 없습니다.</p>
           <p>최신 Chrome, Edge, Firefox, Safari에서 하드웨어 가속을 켜고 다시 시도해 주세요.</p>
         </main>
+      )}
+      {mobile && (
+        <>
+          <MobileSheet />
+          <MobileTabBar />
+        </>
       )}
     </div>
   );

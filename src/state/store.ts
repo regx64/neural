@@ -15,6 +15,8 @@ export type Target =
   | { kind: 'neuron'; layer: number; index: number }
   | { kind: 'edge'; layer: number; from: number; to: number };
 
+export type MobileTab = 'data' | 'network' | 'train' | 'more';
+
 export type EdgeMode = 'weight' | 'contribution' | 'gradient';
 
 export interface Live {
@@ -139,6 +141,11 @@ export interface LabState {
   selectAdjacentNeuron(dir: -1 | 1): void;
   shortcutsOpen: boolean;
   setShortcutsOpen(open: boolean): void;
+  /** Phone layout: which panel the bottom sheet shows (null = collapsed, the 3D view gets the space). */
+  mobileTab: MobileTab | null;
+  /** The view has been rotated away from the front (offer a way back). */
+  cameraTurned: boolean;
+  setMobileTab(tab: MobileTab | null): void;
 }
 
 let client: TrainerClient | null = null;
@@ -409,6 +416,10 @@ export const useLab = create<LabState>()((set, get) => {
     },
     shortcutsOpen: false,
     setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
+    mobileTab: null,
+    cameraTurned: false,
+    setMobileTab: (mobileTab) =>
+      set(mobileTab === 'more' ? { mobileTab, advancedOpen: true } : { mobileTab }),
     previewSnapshot: (id) => {
       set({ previewTarget: id });
       client?.send({ type: 'preview', id });
