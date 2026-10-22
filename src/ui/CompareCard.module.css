@@ -1,0 +1,81 @@
+.clear {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 13px;
+  color: var(--link);
+  cursor: pointer;
+}
+
+.thumbs {
+  display: flex;
+  gap: 20px;
+}
+
+.thumbs figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 112px;
+}
+
+.thumbs figcaption {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-tertiary);
+}
+
+.thumbs figcaption b {
+  color: var(--text);
+  margin-right: 2px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th {
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-align: right;
+  padding-bottom: 4px;
+}
+
+.table td {
+  padding: 5px 0;
+  border-top: 1px solid var(--separator);
+  text-align: right;
+  color: var(--text-secondary);
+}
+
+.table td:first-child {
+  text-align: left;
+}
+
+.better {
+  color: #1a7f37 !important;
+  font-weight: 600;
+}
+
+.changes {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.changes b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.changes ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.changes p {
+  margin: 4px 0 0;
+}

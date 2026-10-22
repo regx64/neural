@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useLab } from '@state/store';
 import type { SnapshotMeta } from '@core/timeline';
 import type { History } from '@state/history';
+import type { Pinned } from '@state/store';
 import styles from './canvas2d.module.css';
 
 export type ChartKind = 'loss' | 'accuracy';
@@ -21,9 +22,10 @@ function niceEpochTicks(max: number): number[] {
 }
 
 /** Horizontal mapping shared by drawing and scrubbing. */
-function epochRange(h: History): [number, number] {
+function epochRange(h: History, pinned?: Pinned | null): [number, number] {
   const n = h.epochs.length;
-  return [0, Math.max(10, n ? h.epochs[n - 1] : 0)];
+  const pinnedLast = pinned?.history.epochs.at(-1) ?? 0;
+  return [0, Math.max(10, n ? h.epochs[n - 1] : 0, pinnedLast)];
 }
 
 function draw(
@@ -33,6 +35,7 @@ function draw(
   log: boolean,
   timeline: SnapshotMeta[],
   previewEpoch: number | null,
+  pinned: Pinned | null,
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -47,12 +50,13 @@ function draw(
 
   const series = kind === 'loss' ? [h.trainLoss, h.testLoss] : [h.trainAccuracy, h.testAccuracy];
   const n = h.epochs.length;
-  const [minEpoch, maxEpoch] = epochRange(h);
+  const [minEpoch, maxEpoch] = epochRange(h, pinned);
 
   let lo = 0;
   let hi = 1;
   if (kind === 'loss') {
-    const vals = series.flat().filter((v) => Number.isFinite(v) && v > 0);
+    const pinnedVals = pinned ? pinned.history.trainLoss : [];
+    const vals = [...series.flat(), ...pinnedVals].filter((v) => Number.isFinite(v) && v > 0);
     const max = vals.length ? Math.max(...vals) : 1;
     const min = vals.length ? Math.min(...vals) : 0.001;
     if (log) {
@@ -94,6 +98,26 @@ function draw(
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   for (const t of niceEpochTicks(maxEpoch)) ctx.fillText(String(t), xOf(t), H - PAD.bottom + 4);
+
+  // The pinned run "A", behind the live curves.
+  if (pinned) {
+    const values = kind === 'loss' ? pinned.history.trainLoss : pinned.history.trainAccuracy;
+    ctx.strokeStyle = 'rgba(0, 102, 204, 0.45)';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    let started = false;
+    pinned.history.epochs.forEach((ep, k) => {
+      const v = values[k];
+      if (!Number.isFinite(v)) return;
+      if (started) ctx.lineTo(xOf(ep), yOf(v));
+      else {
+        ctx.moveTo(xOf(ep), yOf(v));
+        started = true;
+      }
+    });
+    ctx.stroke();
+  }
 
   // Series.
   series.forEach((values, s) => {
@@ -154,7 +178,7 @@ export function MetricChart({ kind, log = false }: { kind: ChartKind; log?: bool
       raf = requestAnimationFrame(() => {
         raf = 0;
         const st = useLab.getState();
-        draw(canvas, st.history, kind, log, st.timeline, st.live.preview?.epoch ?? null);
+        draw(canvas, st.history, kind, log, st.timeline, st.live.preview?.epoch ?? null, st.compareA);
       });
     };
     const resize = () => {
@@ -166,7 +190,8 @@ export function MetricChart({ kind, log = false }: { kind: ChartKind; log?: bool
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
     const unsub = useLab.subscribe((s, p) => {
-      if (s.historyTick !== p.historyTick || s.timeline !== p.timeline) request();
+      if (s.historyTick !== p.historyTick || s.timeline !== p.timeline || s.compareA !== p.compareA)
+        request();
     });
     resize();
     return () => {
@@ -181,7 +206,7 @@ export function MetricChart({ kind, log = false }: { kind: ChartKind; log?: bool
     const st = useLab.getState();
     if (st.timeline.length === 0) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const [lo, hi] = epochRange(st.history);
+    const [lo, hi] = epochRange(st.history, st.compareA);
     const t = (e.clientX - rect.left - PAD.left) / (rect.width - PAD.left - PAD.right);
     const epoch = lo + Math.max(0, Math.min(1, t)) * (hi - lo);
     let best = st.timeline[0];
@@ -208,4 +233,4 @@ export function MetricChart({ kind, log = false }: { kind: ChartKind; log?: bool
   );
 }
 
-export const CHART_COLORS = { train: TRAIN, test: TEST };
+export const CHART_COLORS = { train: TRAIN, test: TEST, pinned: 'rgba(0, 102, 204, 0.45)' };

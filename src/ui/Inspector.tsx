@@ -2,7 +2,7 @@ import { featureLabel } from '@core/data/features';
 import { activationFormula } from '@core/nn/activations';
 import { weightIndex, type Model } from '@core/nn/model';
 import { neuronBreakdown, type Trace } from '@core/nn/trace';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { activationScales, liveModel, liveTrace, responseMap } from '@state/derived';
 import { useLab, type LabState, type Target } from '@state/store';
 import {
@@ -15,6 +15,8 @@ import {
 } from '@viz/encoding';
 import { layerName } from '@viz/three/sceneRefs';
 import { useLiveTick } from './hooks';
+import { BackpropView, probeLabel } from './Backprop';
+import { Segmented } from './controls';
 import { CloseIcon } from './icons';
 import { Term } from './Term';
 import styles from './Inspector.module.css';
@@ -372,6 +374,10 @@ function EdgeView({
 export function Inspector() {
   useLiveTick(12);
   const selection = useLab((st) => st.selection);
+  const probePoint = useLab((st) => st.probe.point);
+  const [mode, setMode] = useState<'forward' | 'backward'>('forward');
+  // A manual "correct answer" override applies to the current probe point only.
+  const [target, setTarget] = useState<{ point: [number, number] | null; y: 0 | 1 } | null>(null);
   if (!selection) return null;
   const s = useLab.getState();
   const model = liveModel(s);
@@ -398,12 +404,37 @@ export function Inspector() {
         </button>
       </header>
       <div className={styles.body}>
+        <Segmented<'forward' | 'backward'>
+          label="계산 방향"
+          stretch
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: 'forward', label: '순전파 · 예측', title: '입력에서 출력으로: 값이 어떻게 계산되는지' },
+            {
+              value: 'backward',
+              label: '역전파 · 학습',
+              title: '출력에서 입력으로: 틀린 만큼 무엇을 고치는지',
+            },
+          ]}
+        />
         {(!model || !trace) && <p className={styles.hint}>모델을 불러오는 중…</p>}
-        {selection.kind === 'neuron' && model && trace && (
+        {mode === 'forward' && selection.kind === 'neuron' && model && trace && (
           <NeuronView s={s} model={model} trace={trace} t={selection} />
         )}
-        {selection.kind === 'edge' && model && trace && (
+        {mode === 'forward' && selection.kind === 'edge' && model && trace && (
           <EdgeView s={s} model={model} trace={trace} t={selection} />
+        )}
+        {mode === 'backward' && model && trace && (
+          <BackpropView
+            s={s}
+            model={model}
+            trace={trace}
+            t={selection}
+            y={target && target.point === probePoint ? target.y : probeLabel(s)}
+            onTarget={(y) => setTarget({ point: probePoint, y })}
+            name={(l, j) => neuronLabel(s, l, j)}
+          />
         )}
       </div>
     </aside>

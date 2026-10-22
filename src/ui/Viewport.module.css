@@ -345,3 +345,53 @@
 .backNow:hover {
   background: rgba(255, 255, 255, 0.16);
 }
+
+@media (max-width: 900px) {
+  .wrap {
+    padding: 12px 12px 0;
+  }
+
+  .topLeft {
+    top: 14px;
+    left: 16px;
+    min-width: 0;
+    max-width: calc(100% - 32px);
+    gap: 8px;
+  }
+
+  .stats {
+    gap: 20px;
+  }
+
+  .stats dd {
+    font-size: 20px;
+  }
+
+  .narration {
+    font-size: 12px;
+    padding: 5px 12px;
+  }
+
+  .legend,
+  .hint {
+    display: none;
+  }
+
+  .player {
+    bottom: 12px;
+    gap: 2px;
+  }
+
+  .player .speed {
+    display: none;
+  }
+
+  .player .divider:last-of-type {
+    display: none;
+  }
+
+  .timeBanner {
+    bottom: 72px;
+    font-size: 12px;
+  }
+}

@@ -15,10 +15,17 @@ const FOCUS_DISTANCE = 6;
 /** Half the inspector card width (+ margin): the scene slides left by this much while it is open. */
 const INSPECTOR_SHIFT = 172;
 
-export function viewDistance(): number {
+const FOV = 45;
+
+/** Distance at which the whole network fits the view, horizontally and vertically. */
+export function viewDistance(aspect = 1.6): number {
   const layout = sceneRefs.layout;
-  const span = layout ? Math.max(layout.width, layout.height * 1.6) : 8;
-  return Math.max(9, span * 1.1 + 5);
+  const width = (layout ? layout.width : 8) + 3;
+  const height = (layout ? layout.height : 4) + 3.5;
+  const tanV = Math.tan(((FOV / 2) * Math.PI) / 180);
+  const fitH = height / 2 / tanV;
+  const fitW = width / 2 / (tanV * Math.max(0.3, aspect));
+  return Math.max(9, fitW, fitH) * 1.08;
 }
 
 function presetPosition(preset: 1 | 2 | 3, d: number): Vector3 {
@@ -38,6 +45,7 @@ const ease = (t: number) => 1 - (1 - t) ** 3;
 export function CameraRig() {
   const camera = useThree((s) => s.camera);
   const size = useThree((s) => s.size);
+  const getState = useThree((s) => s.get);
   const shift = useRef(0);
   const controls = useThree((s) => s.controls) as unknown as Controls | null;
   const request = useLab((s) => s.camera);
@@ -51,6 +59,7 @@ export function CameraRig() {
 
   // Keep the whole network in view when layers are added or removed (direction is preserved).
   const layerCount = useLab((s) => s.config.network.hidden.length);
+  const aspectBucket = Math.round((size.width / Math.max(1, size.height)) * 4);
   useEffect(() => {
     if (!controls) return;
     const id = requestAnimationFrame(() => {
@@ -58,10 +67,13 @@ export function CameraRig() {
       const fromTarget = controls.target.clone();
       const toTarget = new Vector3(0, 0, 0);
       const dir = fromPos.clone().sub(fromTarget).normalize();
-      anim.current = { fromPos, toPos: dir.multiplyScalar(viewDistance()), fromTarget, toTarget, t: 0 };
+      const { width, height } = getState().size;
+      const toPos = dir.multiplyScalar(viewDistance(width / Math.max(1, height)));
+      anim.current = { fromPos, toPos, fromTarget, toTarget, t: 0 };
     });
     return () => cancelAnimationFrame(id);
-  }, [layerCount, camera, controls]);
+    // Refit when layers are added/removed or the view's shape changes (e.g. phone rotation).
+  }, [layerCount, camera, controls, aspectBucket, getState]);
 
   useEffect(() => {
     if (!request || !controls) return;
@@ -71,14 +83,15 @@ export function CameraRig() {
     let toTarget: Vector3;
     if (request.kind === 'preset') {
       toTarget = new Vector3(0, 0, 0);
-      toPos = presetPosition(request.preset ?? 1, viewDistance());
+      const { width, height } = getState().size;
+      toPos = presetPosition(request.preset ?? 1, viewDistance(width / Math.max(1, height)));
     } else {
       toTarget = new Vector3(...(request.target ?? [0, 0, 0]));
       const dir = fromPos.clone().sub(fromTarget).normalize();
       toPos = toTarget.clone().add(dir.multiplyScalar(FOCUS_DISTANCE));
     }
     anim.current = { fromPos, toPos, fromTarget, toTarget, t: 0 };
-  }, [request, camera, controls]);
+  }, [request, camera, controls, getState]);
 
   useFrame((_, dt) => {
     // Slide the rendered view so the network stays clear of the floating inspector.

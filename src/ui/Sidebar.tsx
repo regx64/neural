@@ -11,6 +11,7 @@ import { CHART_COLORS, MetricChart, type ChartKind } from '@viz/canvas2d/MetricC
 import { CSS_COLORS } from '@viz/encoding';
 import { Card, Disclosure, Field, Row, Segmented, Select, Slider, Stepper } from './controls';
 import { PlusIcon } from './icons';
+import { CompareCard } from './CompareCard';
 import { LessonCard } from './LessonCard';
 import { Term } from './Term';
 import styles from './Sidebar.module.css';
@@ -212,6 +213,7 @@ function NetworkCard() {
 
 function ChartCard() {
   const [kind, setKind] = useState<ChartKind>('loss');
+  const pinned = useLab((s) => s.compareA !== null);
   return (
     <Card
       title="학습 곡선"
@@ -238,10 +240,26 @@ function ChartCard() {
         <span>
           <i style={{ borderColor: CHART_COLORS.test, borderTopStyle: 'dashed' }} /> 검증
         </span>
+        {pinned && (
+          <span>
+            <i style={{ borderColor: CHART_COLORS.pinned, borderTopWidth: 3 }} /> A
+          </span>
+        )}
         <span className={styles.chartHint}>
           <Term id="timeTravel">곡선을 눌러 과거 보기</Term>
         </span>
       </div>
+      <button
+        type="button"
+        className={styles.link}
+        data-testid="pin-a"
+        onClick={() => {
+          useLab.getState().pinA('직접 고정');
+          useLab.getState().showToast('지금 결과를 A로 고정했어요. 설정을 바꿔 학습하면 A와 비교돼요.');
+        }}
+      >
+        {pinned ? '지금 결과로 A 바꾸기' : '지금 결과를 A로 고정하고 비교하기'}
+      </button>
     </Card>
   );
 }
@@ -369,6 +387,7 @@ export function Sidebar() {
       <DataCard />
       <NetworkCard />
       <ChartCard />
+      <CompareCard />
       <AdvancedSettings />
     </aside>
   );

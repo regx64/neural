@@ -48,6 +48,23 @@ export interface CameraRequest {
   target?: [number, number, number];
 }
 
+/** A frozen copy of an experiment's result, for A/B comparison. */
+export interface Pinned {
+  label: string;
+  config: ExperimentConfig;
+  dataset: Dataset;
+  boundary: Float32Array | null;
+  boundaryRes: number;
+  metrics: Metrics | null;
+  history: {
+    epochs: number[];
+    trainLoss: number[];
+    testLoss: number[];
+    trainAccuracy: number[];
+    testAccuracy: number[];
+  };
+}
+
 export interface LabState {
   config: ExperimentConfig;
   /** Increments whenever the model structure or data changes (requires re-init). */
@@ -94,8 +111,17 @@ export interface LabState {
   setHover(target: Target | null, pointer?: { x: number; y: number }): void;
   setEdgeMode(mode: EdgeMode): void;
   requestCamera(req: Omit<CameraRequest, 'id'>): void;
-  /** Replaces the whole experiment (used by lessons): paused, fresh weights, nothing selected. */
-  loadConfig(config: ExperimentConfig): void;
+  /** Replaces the whole experiment (lessons, shared links, saved experiments): paused, nothing selected. */
+  loadConfig(config: ExperimentConfig, weights?: { params: number[]; epoch: number }): void;
+  /** Short confirmation message at the top of the lab. */
+  toast: { id: number; text: string } | null;
+  showToast(text: string): void;
+  /** Experiment pinned for side-by-side comparison. */
+  compareA: Pinned | null;
+  /** The latest live (non-preview) result — what pinning while viewing the past refers to. */
+  lastLive: { boundary: Float32Array | null; boundaryRes: number; metrics: Metrics | null };
+  pinA(label: string): void;
+  clearA(): void;
   /** Live data editing: swaps in user-drawn points without resetting the weights. */
   editPoints(points: number[], labels: number[]): void;
   setAdvancedOpen(open: boolean): void;
@@ -140,7 +166,12 @@ export function layerSizesOf(config: ExperimentConfig): number[] {
 
 export const useLab = create<LabState>()((set, get) => {
   /** Applies a config change that needs new data/model, keeping the run going if it was. */
-  const reinit = (config: ExperimentConfig, dataChanged: boolean, running = get().live.running) => {
+  const reinit = (
+    config: ExperimentConfig,
+    dataChanged: boolean,
+    running = get().live.running,
+    weights?: { params: number[]; epoch: number },
+  ) => {
     const s = get();
     const version = s.version + 1;
     const dataset = dataChanged ? generateDataset(config.dataset, config.seed) : s.dataset;
@@ -160,7 +191,7 @@ export const useLab = create<LabState>()((set, get) => {
         ? { ...s.probe, sampleIndex: 0, point: s.probe.auto ? null : s.probe.point }
         : s.probe,
     });
-    client?.send({ type: 'init', config, version, running });
+    client?.send({ type: 'init', config, version, running, weights });
     if (get().probe.point === null) get().advanceProbe();
   };
 
@@ -195,6 +226,15 @@ export const useLab = create<LabState>()((set, get) => {
       },
       historyTick: s.historyTick + 1,
       ...(e.timeline ? { timeline: e.timeline } : {}),
+      ...(!e.preview
+        ? {
+            lastLive: {
+              boundary: e.boundary ?? s.lastLive.boundary,
+              boundaryRes: e.boundary ? e.boundaryRes : s.lastLive.boundaryRes,
+              metrics: e.metrics,
+            },
+          }
+        : {}),
       ...(!e.preview && s.previewTarget !== null && e.running ? { previewTarget: null } : {}),
     });
   };
@@ -290,7 +330,7 @@ export const useLab = create<LabState>()((set, get) => {
     setHover: (hover, pointer) => set(pointer ? { hover, pointer } : { hover }),
     setEdgeMode: (edgeMode) => set({ edgeMode }),
     requestCamera: (req) => set({ camera: { ...req, id: (get().camera?.id ?? 0) + 1 } }),
-    loadConfig(config) {
+    loadConfig(config, weights) {
       set({
         selection: null,
         hover: null,
@@ -298,8 +338,36 @@ export const useLab = create<LabState>()((set, get) => {
         drawMode: false,
         probe: { point: null, auto: true, sampleIndex: 0 },
       });
-      reinit(config, true, false);
+      reinit(config, true, false, weights);
     },
+    toast: null,
+    showToast: (text) => set({ toast: { id: (get().toast?.id ?? 0) + 1, text } }),
+    compareA: null,
+    lastLive: { boundary: null, boundaryRes: 0, metrics: null },
+    pinA(label) {
+      const s = get();
+      const h = s.history;
+      const latest = s.lastLive;
+      set({
+        compareA: {
+          label,
+          config: s.config,
+          dataset: s.dataset,
+          boundary: latest.boundary ? latest.boundary.slice() : null,
+          boundaryRes: latest.boundaryRes,
+          metrics: latest.metrics,
+          history: {
+            epochs: h.epochs.slice(),
+            trainLoss: h.trainLoss.slice(),
+            testLoss: h.testLoss.slice(),
+            trainAccuracy: h.trainAccuracy.slice(),
+            testAccuracy: h.testAccuracy.slice(),
+          },
+        },
+        historyTick: s.historyTick + 1,
+      });
+    },
+    clearA: () => set({ compareA: null, historyTick: get().historyTick + 1 }),
     editPoints(points, labels) {
       const s = get();
       const dataset: DatasetConfig = { ...s.config.dataset, id: 'custom', points, labels };
@@ -331,8 +399,11 @@ export const useLab = create<LabState>()((set, get) => {
     resumeFromPreview(play) {
       const p = get().live.preview;
       if (!p) return;
+      // Keep the abandoned branch so it can be compared with the new one.
+      get().pinA(`되감기 전 (Epoch ${(get().history.epochs.at(-1) ?? 0).toLocaleString()}까지)`);
       get().history.truncate(p.epoch);
       set({ resumes: get().resumes + 1, previewTarget: null });
+      get().showToast('이전 학습 기록을 A로 남겨 뒀어요. 학습 곡선 카드에서 비교할 수 있어요.');
       client?.send({ type: 'resume', id: p.id, play });
     },
     stepSnapshot(dir) {

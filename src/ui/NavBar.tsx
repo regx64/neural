@@ -1,4 +1,5 @@
 import { useLesson } from '@state/lesson';
+import { ExperimentsMenu } from './ExperimentsMenu';
 import styles from './NavBar.module.css';
 
 export function NavBar() {
@@ -10,13 +11,18 @@ export function NavBar() {
       </a>
       <span className={styles.title}>연구실</span>
       <div className={styles.links}>
-        <button type="button" className={styles.link} onClick={() => useLesson.getState().start('tour')}>
+        <ExperimentsMenu />
+        <button
+          type="button"
+          className={`${styles.link} ${styles.hideSmall}`}
+          onClick={() => useLesson.getState().start('tour')}
+        >
           둘러보기
         </button>
         <a className={styles.link} href={`${base}learn/`}>
           배우기
         </a>
-        <a className={styles.link} href={base}>
+        <a className={`${styles.link} ${styles.hideSmall}`} href={base}>
           소개
         </a>
       </div>

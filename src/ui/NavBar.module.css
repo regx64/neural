@@ -42,3 +42,21 @@
 .link:hover {
   color: var(--text);
 }
+
+@media (max-width: 900px) {
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: 0 16px;
+  }
+
+  .title,
+  .hideSmall {
+    display: none;
+  }
+
+  .nav {
+    grid-template-columns: auto 1fr;
+  }
+}

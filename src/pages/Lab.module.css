@@ -20,3 +20,18 @@
   text-align: center;
   color: var(--text-secondary);
 }
+
+/* Phones and narrow tablets: viewport on top, cards below, the page scrolls. */
+@media (max-width: 900px) {
+  .lab {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: var(--nav-height) min(72vh, 640px) auto;
+    grid-template-areas:
+      'nav'
+      'view'
+      'side';
+  }
+}

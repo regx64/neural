@@ -5,6 +5,8 @@ import { Sidebar } from '@ui/Sidebar';
 import { Viewport } from '@ui/Viewport';
 import { Welcome } from '@ui/Welcome';
 import { useLesson } from '@state/lesson';
+import { readSharedConfig, SHARE_PARAM } from '@state/share';
+import { Toast } from '@ui/Toast';
 import styles from './Lab.module.css';
 
 const PROBE_CYCLE_MS = 1500;
@@ -70,17 +72,34 @@ function useProbeCycle() {
 export function Lab() {
   const [webgl] = useState(hasWebGL2);
   const [lessonParam] = useState(() => new URLSearchParams(window.location.search).get('lesson'));
+  const [sharedLink] = useState(() => window.location.hash.includes(`${SHARE_PARAM}=`));
   useEffect(() => useLab.getState().connect(), []);
   useEffect(() => {
     if (lessonParam) useLesson.getState().start(lessonParam);
   }, [lessonParam]);
+  useEffect(() => {
+    if (!sharedLink) return;
+    let cancelled = false;
+    readSharedConfig().then((config) => {
+      if (cancelled) return;
+      const s = useLab.getState();
+      if (config) {
+        s.loadConfig(config);
+        s.showToast('공유받은 실험을 불러왔어요. ▶를 누르면 같은 학습이 재현돼요.');
+      } else s.showToast('공유 링크를 읽지 못했어요. 기본 실험으로 시작해요.');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [sharedLink]);
   useKeyboardShortcuts();
   useProbeCycle();
 
   return (
     <div className={styles.lab}>
       <NavBar />
-      <Welcome suppressed={!!lessonParam} />
+      <Welcome suppressed={!!lessonParam || sharedLink} />
+      <Toast />
       <Sidebar />
       {webgl ? (
         <Viewport />

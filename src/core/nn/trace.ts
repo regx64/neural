@@ -1,3 +1,4 @@
+import { activateDerivative, sigmoid } from './activations';
 import { createWorkspace, forward, weightIndex, type Model } from './model';
 
 /** Every intermediate value of one forward pass — what the inspector and 3D view display. */
@@ -43,4 +44,24 @@ export function neuronBreakdown(model: Model, trace: Trace, l: number, to: numbe
     z: trace.z[l][to],
     a: trace.a[l][to],
   };
+}
+
+/**
+ * Backpropagation for a single sample with label `y`: δ = ∂L/∂z for every neuron (index 0
+ * unused). The weight gradient of edge i→j into layer l is then δ[l][j] · a[l−1][i].
+ */
+export function backwardTrace(model: Model, trace: Trace, y: number): Float64Array[] {
+  const L = model.layers.length;
+  const delta = model.sizes.map((n) => new Float64Array(n));
+  delta[L][0] = sigmoid(trace.z[L][0]) - y;
+  for (let l = L; l > 1; l--) {
+    const layer = model.layers[l - 1];
+    const below = model.layers[l - 2];
+    for (let i = 0; i < layer.inSize; i++) {
+      let sum = 0;
+      for (let j = 0; j < layer.outSize; j++) sum += model.params[weightIndex(layer, j, i)] * delta[l][j];
+      delta[l - 1][i] = sum * activateDerivative(below.activation, trace.z[l - 1][i], trace.a[l - 1][i]);
+    }
+  }
+  return delta;
 }

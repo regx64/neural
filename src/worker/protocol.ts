@@ -7,7 +7,14 @@ export type Speed = number | 'max';
 
 /** Main thread → worker. */
 export type Command =
-  | { type: 'init'; config: ExperimentConfig; version: number; running: boolean }
+  | {
+      type: 'init';
+      config: ExperimentConfig;
+      version: number;
+      running: boolean;
+      /** Saved weights to start from instead of a fresh initialization. */
+      weights?: { params: number[]; epoch: number };
+    }
   | { type: 'play' }
   | { type: 'pause' }
   | { type: 'step'; epochs: number }

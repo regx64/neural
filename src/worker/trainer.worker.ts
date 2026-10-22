@@ -155,6 +155,10 @@ self.onmessage = (e: MessageEvent<Command>) => {
     switch (cmd.type) {
       case 'init':
         trainer = new Trainer(cmd.config);
+        if (cmd.weights && cmd.weights.params.length === trainer.model.params.length) {
+          trainer.model.params.set(cmd.weights.params);
+          trainer.epoch = cmd.weights.epoch;
+        }
         version = cmd.version;
         previewId = null;
         restartTimeline();

@@ -243,3 +243,24 @@
   font-weight: 600;
   font-size: 13px;
 }
+
+.targetRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Bottom sheet on small screens so the network stays visible above it. */
+@media (max-width: 900px) {
+  .panel {
+    position: fixed;
+    top: auto;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+    max-height: 55vh;
+  }
+}

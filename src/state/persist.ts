@@ -21,18 +21,17 @@ export function saveConfig(config: ExperimentConfig): void {
   }
 }
 
-/** The saved experiment, or null if there is none or it no longer fits the current app. */
-export function loadSavedConfig(): ExperimentConfig | null {
+/** Accepts only configs this version of the app can build (structure, limits, data). */
+export function validConfig(value: unknown): ExperimentConfig | null {
   try {
-    const raw = storage()?.getItem(KEY);
-    if (!raw) return null;
-    const c = JSON.parse(raw) as ExperimentConfig;
+    const c = value as ExperimentConfig;
     if (
-      !Array.isArray(c.network?.hidden) ||
+      !Array.isArray(c?.network?.hidden) ||
       c.network.hidden.length > LIMITS.maxHiddenLayers ||
       c.network.hidden.some((n) => !(n >= 1 && n <= LIMITS.maxNeurons)) ||
       !c.network.features?.length ||
-      typeof c.hyper?.learningRate !== 'number'
+      typeof c.hyper?.learningRate !== 'number' ||
+      typeof c.seed !== 'number'
     )
       return null;
     createModel(toModelSpec(c.network));
@@ -40,6 +39,38 @@ export function loadSavedConfig(): ExperimentConfig | null {
     return c;
   } catch {
     return null;
+  }
+}
+
+/** The saved experiment, or null if there is none or it no longer fits the current app. */
+export function loadSavedConfig(): ExperimentConfig | null {
+  try {
+    const raw = storage()?.getItem(KEY);
+    return raw ? validConfig(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** JSON value under `key`, or `fallback` if missing/unreadable. */
+export function readJSON<T>(key: string, fallback: T): T {
+  try {
+    const raw = storage()?.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/** Returns false if the browser refused to store it (quota, privacy mode). */
+export function writeJSON(key: string, value: unknown): boolean {
+  try {
+    const st = storage();
+    if (!st) return false;
+    st.setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
   }
 }
 
