@@ -2,9 +2,10 @@ import { Rng, deriveSeed } from '../rng';
 import type { Samples } from '../nn/model';
 import { applyFeatures, type FeatureId } from './features';
 
-export type DatasetId = 'xor' | 'gaussian' | 'circle' | 'moons' | 'spiral';
+export type DatasetId = 'xor' | 'gaussian' | 'circle' | 'moons' | 'spiral' | 'custom';
 
-export const DATASETS: { id: DatasetId; label: string }[] = [
+/** Generated datasets (the user-drawn `custom` one is listed separately in the UI). */
+export const DATASETS: { id: Exclude<DatasetId, 'custom'>; label: string }[] = [
   { id: 'xor', label: 'XOR' },
   { id: 'gaussian', label: 'Gaussian' },
   { id: 'circle', label: 'Circle' },
@@ -20,6 +21,9 @@ export interface DatasetConfig {
   noise: number;
   /** Fraction of samples used for training, 0.5 … 0.9. */
   trainRatio: number;
+  /** `custom` only: user-drawn points as flat [x₁, x₂, …] and their 0/1 labels. */
+  points?: number[];
+  labels?: number[];
 }
 
 /** Raw 2D points in [−1, 1]² with 0/1 labels and a deterministic train/test split. */
@@ -37,7 +41,7 @@ type Generator = (rng: Rng, n: number, noise: number) => { points: Float64Array;
 
 const clamp = (v: number) => Math.max(-DOMAIN, Math.min(DOMAIN, v));
 
-const generators: Record<DatasetId, Generator> = {
+const generators: Record<Exclude<DatasetId, 'custom'>, Generator> = {
   xor(rng, n, noise) {
     const points = new Float64Array(n * 2);
     const labels = new Uint8Array(n);
@@ -111,12 +115,27 @@ const generators: Record<DatasetId, Generator> = {
 };
 
 export function generateDataset(config: DatasetConfig, seed: number): Dataset {
+  if (config.id === 'custom') return customDataset(config);
   const rng = new Rng(deriveSeed(seed, 1));
   const count = Math.max(4, Math.round(config.samples));
   const { points, labels } = generators[config.id](rng, count, config.noise);
   const order = rng.shuffle(Uint32Array.from({ length: count }, (_, i) => i));
   const nTrain = Math.min(count - 1, Math.max(1, Math.round(count * config.trainRatio)));
   return { points, labels, count, train: order.slice(0, nTrain), test: order.slice(nTrain) };
+}
+
+/**
+ * User-drawn points. The split is by position (every 4th point is held out once there are at
+ * least 8) so adding a point never reshuffles which existing points are train or test.
+ */
+function customDataset(config: DatasetConfig): Dataset {
+  const labels = Uint8Array.from(config.labels ?? []);
+  const count = labels.length;
+  const points = Float64Array.from((config.points ?? []).slice(0, count * 2));
+  const train: number[] = [];
+  const test: number[] = [];
+  for (let i = 0; i < count; i++) (count >= 8 && i % 4 === 3 ? test : train).push(i);
+  return { points, labels, count, train: Uint32Array.from(train), test: Uint32Array.from(test) };
 }
 
 /** Feature-transformed samples for the given subset of a dataset. */

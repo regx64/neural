@@ -73,7 +73,7 @@ function draw(canvas: HTMLCanvasElement, s: LabState, scratch: { img?: HTMLCanva
   for (const idx of dataset.test) drawPoint(idx, false);
   for (const idx of dataset.train) drawPoint(idx, true);
 
-  const pt = s.probe.point;
+  const pt = s.drawMode ? null : s.probe.point;
   if (pt) {
     const x = px(pt[0]);
     const y = py(pt[1]);
@@ -95,7 +95,9 @@ function draw(canvas: HTMLCanvasElement, s: LabState, scratch: { img?: HTMLCanva
   }
 }
 
-/** 2D data plot with the model's decision boundary. Clicking sets the probe input. */
+const REMOVE_RADIUS = 0.08;
+
+/** 2D data plot with the model's decision boundary. Clicking sets the probe input (or edits points). */
 export function DecisionBoundary({ size }: { size: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
@@ -116,7 +118,13 @@ export function DecisionBoundary({ size }: { size: number }) {
     };
     request();
     const unsub = useLab.subscribe((s, p) => {
-      if (s.live.boundary !== p.live.boundary || s.dataset !== p.dataset || s.probe !== p.probe) request();
+      if (
+        s.live.boundary !== p.live.boundary ||
+        s.dataset !== p.dataset ||
+        s.probe !== p.probe ||
+        s.drawMode !== p.drawMode
+      )
+        request();
     });
     return () => {
       unsub();
@@ -124,11 +132,49 @@ export function DecisionBoundary({ size }: { size: number }) {
     };
   }, [size]);
 
-  const onClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const toDomain = (e: React.MouseEvent<HTMLCanvasElement>): [number, number] => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     const y = 1 - ((e.clientY - rect.top) / rect.height) * 2;
-    useLab.getState().setProbePoint([Math.max(-1, Math.min(1, x)), Math.max(-1, Math.min(1, y))]);
+    return [Math.max(-1, Math.min(1, x)), Math.max(-1, Math.min(1, y))];
+  };
+
+  /** Draw mode: add a point of the chosen class, or remove the nearest one. */
+  const edit = (pt: [number, number], remove: boolean) => {
+    const s = useLab.getState();
+    const { dataset, drawClass } = s;
+    const points = Array.from(dataset.points.slice(0, dataset.count * 2));
+    const labels = Array.from(dataset.labels);
+    if (remove) {
+      let best = -1;
+      let bestD = REMOVE_RADIUS;
+      for (let i = 0; i < labels.length; i++) {
+        const d = Math.hypot(points[2 * i] - pt[0], points[2 * i + 1] - pt[1]);
+        if (d < bestD) {
+          bestD = d;
+          best = i;
+        }
+      }
+      if (best < 0) return;
+      points.splice(best * 2, 2);
+      labels.splice(best, 1);
+    } else {
+      points.push(pt[0], pt[1]);
+      labels.push(drawClass);
+    }
+    s.editPoints(points, labels);
+  };
+
+  const onClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const pt = toDomain(e);
+    if (useLab.getState().drawMode) edit(pt, e.shiftKey || e.altKey);
+    else useLab.getState().setProbePoint(pt);
+  };
+
+  const onContextMenu = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!useLab.getState().drawMode) return;
+    e.preventDefault();
+    edit(toDomain(e), true);
   };
 
   return (
@@ -137,6 +183,7 @@ export function DecisionBoundary({ size }: { size: number }) {
       className={styles.boundary}
       style={{ width: size, height: size }}
       onClick={onClick}
+      onContextMenu={onContextMenu}
       aria-label="데이터와 결정 경계. 클릭하면 해당 좌표를 네트워크에 입력합니다."
       data-testid="boundary-canvas"
     />

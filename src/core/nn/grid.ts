@@ -24,3 +24,28 @@ export function predictGrid(model: Model, features: FeatureId[], res: number): F
   }
   return out;
 }
+
+/**
+ * Activation of one neuron (layer ≥ 1) over the input domain — its "response map".
+ * Same orientation as `predictGrid`.
+ */
+export function neuronGrid(
+  model: Model,
+  features: FeatureId[],
+  layer: number,
+  neuron: number,
+  res: number,
+): Float32Array {
+  const out = new Float32Array(res * res);
+  const ws = createWorkspace(model);
+  const x = new Float64Array(features.length);
+  for (let r = 0; r < res; r++) {
+    const x2 = -cellCenter(r, res);
+    for (let c = 0; c < res; c++) {
+      applyFeatures(features, cellCenter(c, res), x2, x);
+      forward(model, x, ws);
+      out[r * res + c] = ws.a[layer][neuron];
+    }
+  }
+  return out;
+}

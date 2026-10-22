@@ -3,6 +3,8 @@ import { useLab } from '@state/store';
 import { NavBar } from '@ui/NavBar';
 import { Sidebar } from '@ui/Sidebar';
 import { Viewport } from '@ui/Viewport';
+import { Welcome } from '@ui/Welcome';
+import { useLesson } from '@state/lesson';
 import styles from './Lab.module.css';
 
 const PROBE_CYCLE_MS = 1500;
@@ -61,13 +63,18 @@ function useProbeCycle() {
 
 export function Lab() {
   const [webgl] = useState(hasWebGL2);
+  const [lessonParam] = useState(() => new URLSearchParams(window.location.search).get('lesson'));
   useEffect(() => useLab.getState().connect(), []);
+  useEffect(() => {
+    if (lessonParam) useLesson.getState().start(lessonParam);
+  }, [lessonParam]);
   useKeyboardShortcuts();
   useProbeCycle();
 
   return (
     <div className={styles.lab}>
       <NavBar />
+      <Welcome suppressed={!!lessonParam} />
       <Sidebar />
       {webgl ? (
         <Viewport />

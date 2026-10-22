@@ -61,3 +61,8 @@ export const CloseIcon = (p: SVGProps<SVGSVGElement>) => (
     <line x1="18" y1="6" x2="6" y2="18" />
   </svg>
 );
+export const CheckIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)} strokeWidth={3}>
+    <polyline points="5 12.5 10 17 19 7" />
+  </svg>
+);

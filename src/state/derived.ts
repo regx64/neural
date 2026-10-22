@@ -1,4 +1,6 @@
 import { applyFeatures } from '@core/data/features';
+import type { FeatureId } from '@core/data/features';
+import { neuronGrid } from '@core/nn/grid';
 import { createModel, createWorkspace, forward, type Model } from '@core/nn/model';
 import { forwardTrace, type Trace } from '@core/nn/trace';
 import { toModelSpec } from '@core/train/config';
@@ -73,4 +75,21 @@ export function activationScales(s: LabState): number[] {
   });
   scaleCache = { params: s.live.params, scales };
   return scales;
+}
+
+let mapCache: { params: Float64Array; key: string; grid: Float32Array } | null = null;
+
+/** A neuron's response map for the current parameters, cached until they change. */
+export function responseMap(
+  model: Model,
+  features: FeatureId[],
+  layer: number,
+  index: number,
+  res: number,
+): Float32Array {
+  const key = `${layer}:${index}:${res}`;
+  if (mapCache?.params !== model.params || mapCache.key !== key) {
+    mapCache = { params: model.params, key, grid: neuronGrid(model, features, layer, index, res) };
+  }
+  return mapCache.grid;
 }

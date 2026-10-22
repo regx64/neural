@@ -24,6 +24,8 @@ test.beforeEach(async ({ page }) => {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   (page as unknown as { errors: string[] }).errors = errors;
+  // Returning visitor: skip the first-visit welcome dialog (covered in beginner.spec.ts).
+  await page.addInitScript(() => localStorage.setItem('neural.welcomed', '1'));
   await page.goto('/lab/');
   await expect(page.getByTestId('metric-epoch')).toHaveText('0');
 });

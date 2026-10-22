@@ -90,6 +90,8 @@ export function Interaction() {
       if (!down || e.button !== 0) return;
       if (Math.hypot(e.clientX - down.x, e.clientY - down.y) <= CLICK_SLOP_PX) {
         useLab.getState().select(pick(e.clientX, e.clientY));
+        // The view slides when the inspector opens, so the old hover target is no longer under the pointer.
+        useLab.getState().setHover(null);
       }
       down = null;
     };

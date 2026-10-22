@@ -3,42 +3,6 @@
   background: #fff;
 }
 
-.nav {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-bottom: 1px solid var(--separator);
-}
-
-.navInner {
-  max-width: 1024px;
-  margin: 0 auto;
-  height: 48px;
-  padding: 0 22px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-}
-
-.logo {
-  font-weight: 600;
-  font-size: 15px;
-  letter-spacing: 0.04em;
-}
-
-.navInner a {
-  color: var(--text-secondary);
-  text-decoration: none;
-}
-
-.navInner a:hover {
-  color: var(--text);
-}
-
 .hero {
   text-align: center;
   padding: 96px 22px 88px;

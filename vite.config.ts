@@ -25,6 +25,7 @@ export default defineConfig({
       input: {
         main: r('index.html'),
         lab: r('lab/index.html'),
+        learn: r('learn/index.html'),
       },
     },
   },

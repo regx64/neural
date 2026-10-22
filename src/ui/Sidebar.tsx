@@ -10,6 +10,9 @@ import { DecisionBoundary } from '@viz/canvas2d/DecisionBoundary';
 import { CHART_COLORS, MetricChart, type ChartKind } from '@viz/canvas2d/MetricChart';
 import { CSS_COLORS } from '@viz/encoding';
 import { Card, Disclosure, Field, Row, Segmented, Select, Slider, Stepper } from './controls';
+import { PlusIcon } from './icons';
+import { LessonCard } from './LessonCard';
+import { Term } from './Term';
 import styles from './Sidebar.module.css';
 
 const PLOT_SIZE = 244;
@@ -53,9 +56,11 @@ function DatasetThumb({ id }: { id: DatasetId }) {
 function DataCard() {
   const datasetId = useLab((s) => s.config.dataset.id);
   const probe = useLab((s) => s.probe);
-  const { setDataset, setProbeAuto } = useLab.getState();
+  const drawMode = useLab((s) => s.drawMode);
+  const drawClass = useLab((s) => s.drawClass);
+  const { setDataset, setProbeAuto, setDrawMode, setDrawClass, editPoints } = useLab.getState();
   return (
-    <Card title="데이터">
+    <Card title="데이터" tour="data">
       <div className={styles.picker} role="radiogroup" aria-label="데이터셋">
         {DATASETS.map((d) => (
           <button
@@ -64,26 +69,82 @@ function DataCard() {
             role="radio"
             aria-checked={d.id === datasetId}
             className={d.id === datasetId ? styles.tileActive : styles.tile}
-            onClick={() => setDataset({ id: d.id })}
+            onClick={() => {
+              setDrawMode(false);
+              setDataset({ id: d.id });
+            }}
           >
             <DatasetThumb id={d.id} />
             <span>{d.label}</span>
           </button>
         ))}
+        <button
+          type="button"
+          role="radio"
+          aria-checked={datasetId === 'custom'}
+          className={datasetId === 'custom' ? styles.tileActive : styles.tile}
+          onClick={() => {
+            // A blank canvas to draw on.
+            editPoints([], []);
+            useLab.setState({ drawMode: true });
+          }}
+        >
+          <span className={styles.thumbDraw} aria-hidden>
+            <PlusIcon width={14} height={14} />
+          </span>
+          <span>직접</span>
+        </button>
       </div>
       <DecisionBoundary size={PLOT_SIZE} />
-      <div className={styles.probe}>
-        <span className="num">
-          입력 {probe.point ? `(${probe.point[0].toFixed(2)}, ${probe.point[1].toFixed(2)})` : '—'}
-        </span>
-        {probe.auto ? (
-          <span>샘플 순회 중</span>
-        ) : (
-          <button type="button" className={styles.link} onClick={() => setProbeAuto(true)}>
-            샘플 순회
-          </button>
+      <div className={styles.drawBar} data-tour="draw">
+        <Segmented<'look' | 'draw'>
+          label="데이터 그림 모드"
+          value={drawMode ? 'draw' : 'look'}
+          onChange={(v) => setDrawMode(v === 'draw')}
+          options={[
+            { value: 'look', label: '살펴보기' },
+            { value: 'draw', label: '점 찍기' },
+          ]}
+        />
+        {drawMode && (
+          <div className={styles.classPick} role="radiogroup" aria-label="찍을 점의 색">
+            {([1, 0] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                role="radio"
+                aria-checked={drawClass === c}
+                aria-label={c === 1 ? '파란 점' : '주황 점'}
+                className={drawClass === c ? styles.swatchOn : styles.swatch}
+                style={{ background: c === 1 ? CSS_COLORS.positive : CSS_COLORS.negative }}
+                onClick={() => setDrawClass(c)}
+              />
+            ))}
+          </div>
         )}
       </div>
+      {drawMode ? (
+        <div className={styles.probe}>
+          <span>클릭: 추가 · Shift+클릭: 지우기</span>
+          <button type="button" className={styles.link} onClick={() => editPoints([], [])}>
+            모두 지우기
+          </button>
+        </div>
+      ) : (
+        <div className={styles.probe}>
+          <span className="num">
+            <Term id="probe">입력</Term>{' '}
+            {probe.point ? `(${probe.point[0].toFixed(2)}, ${probe.point[1].toFixed(2)})` : '—'}
+          </span>
+          {probe.auto ? (
+            <span>샘플 순회 중</span>
+          ) : (
+            <button type="button" className={styles.link} onClick={() => setProbeAuto(true)}>
+              샘플 순회
+            </button>
+          )}
+        </div>
+      )}
     </Card>
   );
 }
@@ -106,6 +167,7 @@ function NetworkCard() {
     <Card
       title="네트워크"
       testId="network-card"
+      tour="network"
       subtitle={`${sizes.join(' – ')} · 파라미터 ${paramCount.toLocaleString()}개`}
       aside={
         <Stepper
@@ -122,7 +184,7 @@ function NetworkCard() {
       ) : (
         <div>
           {network.hidden.map((n, l) => (
-            <Row key={l} label={`은닉 ${l + 1}`}>
+            <Row key={l} label={l === 0 ? <Term id="hiddenLayer">은닉 1</Term> : `은닉 ${l + 1}`}>
               <Stepper
                 label={`은닉 ${l + 1} 뉴런 수`}
                 value={n}
@@ -134,6 +196,9 @@ function NetworkCard() {
           ))}
         </div>
       )}
+      <span className={styles.label}>
+        <Term id="activation" />
+      </span>
       <Segmented<ActivationId>
         label="활성화 함수"
         stretch
@@ -150,6 +215,7 @@ function ChartCard() {
   return (
     <Card
       title="학습 곡선"
+      tour="chart"
       aside={
         <Segmented<ChartKind>
           label="지표"
@@ -181,7 +247,8 @@ function AdvancedSettings() {
   const dataset = useLab((s) => s.config.dataset);
   const hyper = useLab((s) => s.config.hyper);
   const features = useLab((s) => s.config.network.features);
-  const { setDataset, setHyper, setNetwork, newSeed } = useLab.getState();
+  const open = useLab((s) => s.advancedOpen);
+  const { setDataset, setHyper, setNetwork, newSeed, setAdvancedOpen } = useLab.getState();
   const toggleFeature = (id: FeatureId) => {
     const has = features.includes(id);
     if (has && features.length === 1) return;
@@ -190,9 +257,9 @@ function AdvancedSettings() {
     });
   };
   return (
-    <Disclosure title="고급 설정">
+    <Disclosure title="고급 설정" open={open} onToggle={setAdvancedOpen} tour="advanced">
       <div className={styles.grid2}>
-        <Field label="학습률">
+        <Field label={<Term id="learningRate" />}>
           <Select<number>
             label="학습률"
             value={hyper.learningRate}
@@ -200,7 +267,7 @@ function AdvancedSettings() {
             onChange={(learningRate) => setHyper({ learningRate })}
           />
         </Field>
-        <Field label="옵티마이저">
+        <Field label={<Term id="optimizer" />}>
           <Select<OptimizerId>
             label="옵티마이저"
             value={hyper.optimizer}
@@ -211,7 +278,7 @@ function AdvancedSettings() {
             onChange={(optimizer) => setHyper({ optimizer })}
           />
         </Field>
-        <Field label="배치 크기">
+        <Field label={<Term id="batchSize" />}>
           <Select<number>
             label="배치 크기"
             value={hyper.batchSize}
@@ -219,7 +286,7 @@ function AdvancedSettings() {
             onChange={(batchSize) => setHyper({ batchSize })}
           />
         </Field>
-        <Field label="L2 정규화">
+        <Field label={<Term id="l2" />}>
           <Select<number>
             label="L2 정규화"
             value={hyper.l2}
@@ -241,7 +308,7 @@ function AdvancedSettings() {
           onChange={(samples) => setDataset({ samples })}
         />
       </Field>
-      <Field label="노이즈" value={dataset.noise.toFixed(2)}>
+      <Field label={<Term id="noise" />} value={dataset.noise.toFixed(2)}>
         <Slider
           label="노이즈"
           value={dataset.noise}
@@ -251,7 +318,10 @@ function AdvancedSettings() {
           onChange={(noise) => setDataset({ noise })}
         />
       </Field>
-      <Field label="학습 데이터 비율" value={`${Math.round(dataset.trainRatio * 100)}%`}>
+      <Field
+        label={<Term id="validation">학습 데이터 비율</Term>}
+        value={`${Math.round(dataset.trainRatio * 100)}%`}
+      >
         <Slider
           label="학습 데이터 비율"
           value={dataset.trainRatio}
@@ -261,7 +331,7 @@ function AdvancedSettings() {
           onChange={(trainRatio) => setDataset({ trainRatio })}
         />
       </Field>
-      <Field label="입력 특성">
+      <Field label={<Term id="features" />}>
         <div className={styles.chips} role="group" aria-label="입력 특성">
           {FEATURES.map((f) => (
             <button
@@ -286,6 +356,7 @@ function AdvancedSettings() {
 export function Sidebar() {
   return (
     <aside className={styles.sidebar} aria-label="데이터와 네트워크 설정">
+      <LessonCard />
       <DataCard />
       <NetworkCard />
       <ChartCard />

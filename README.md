@@ -17,7 +17,7 @@ NEURAL은 인공신경망을 3D 공간에서 탐험하고, 직접 학습시키�
 
 ```bash
 npm install
-npm run dev          # http://localhost:5173 (랜딩) · /lab/ (연구실)
+npm run dev          # http://localhost:5173 (랜딩) · /learn/ (배우기) · /lab/ (연구실)
 ```
 
 | 명령                                                          | 설명                                                                   |
@@ -42,14 +42,16 @@ src/
   worker/    학습 워커와 메시지 프로토콜
   state/     Zustand 스토어, 메인 스레드 추론(derived), 지표 기록
   viz/       시각 인코딩 기준표(encoding.ts), 3D 씬(three/), 2D 캔버스(canvas2d/)
-  ui/        패널·컨트롤·인스펙터
-  pages/     랜딩, 연구실
+  ui/        패널·컨트롤·인스펙터·레슨 카드·용어 툴팁
+  content/   입문자용 콘텐츠: 레슨, 용어 사전, 상태 문장
+  pages/     랜딩, 배우기(learn/), 연구실
 ```
 
 ## 진행 상황
 
 - [x] **v0.1 MVP** (M0~M4) — 3D 구조 시각화, 선택·툴팁·인스펙터, 학습 워커, 결정 경계, 손실/정확도 차트
-- [ ] **v0.2 Lab** — 데이터 직접 편집, 뉴런 응답 맵, 신호 흐름, 기울기 모드, Time Travel
+- [x] **입문자 경험** — 배우기 페이지(뉴런 놀이터·손실 골짜기), 가이드 레슨 5종, 첫 방문 투어, 용어 툴팁, 상태 문장
+- [ ] **v0.2 Lab** — ~~데이터 직접 편집~~, ~~뉴런 응답 맵~~, ~~자동 저장~~, 신호 흐름, 기울기 모드, Time Travel
 - [ ] **v1.0 Public** — 가이드 시나리오, 저장·공유, 역전파 인스펙터, 랜딩 완성
 
 자세한 진행 기록은 [03-development-plan.md §6](docs/03-development-plan.md#6-진행-기록)을 참고한다.

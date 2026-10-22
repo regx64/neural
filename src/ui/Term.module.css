@@ -1,0 +1,45 @@
+.term {
+  text-decoration: underline dotted rgba(0, 0, 0, 0.35);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  cursor: help;
+  border-radius: 3px;
+}
+
+.term:hover {
+  text-decoration-color: var(--text);
+}
+
+.pop {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-float);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  color: var(--text-secondary);
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+  animation: fade 150ms var(--ease);
+}
+
+.pop b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}

@@ -23,10 +23,10 @@ export interface Metrics {
 
 /** Pure training state machine. Runs in the worker in the app and directly in unit tests. */
 export class Trainer {
-  readonly config: ExperimentConfig;
-  readonly dataset: Dataset;
-  readonly train: Samples;
-  readonly test: Samples;
+  config: ExperimentConfig;
+  dataset!: Dataset;
+  train!: Samples;
+  test!: Samples;
   readonly model: Model;
   hyper: Hyper;
   epoch = 0;
@@ -39,14 +39,26 @@ export class Trainer {
   constructor(config: ExperimentConfig) {
     this.config = config;
     this.hyper = { ...config.hyper };
-    this.dataset = generateDataset(config.dataset, config.seed);
-    this.train = toSamples(this.dataset, this.dataset.train, config.network.features);
-    this.test = toSamples(this.dataset, this.dataset.test, config.network.features);
+    this.loadData();
     this.model = createModel(toModelSpec(config.network));
     this.ws = createWorkspace(this.model);
     this.grads = new Float64Array(this.model.params.length);
     this.order = new Uint32Array(this.train.count);
     this.reset();
+  }
+
+  private loadData(): void {
+    const { dataset, network, seed } = this.config;
+    this.dataset = generateDataset(dataset, seed);
+    this.train = toSamples(this.dataset, this.dataset.train, network.features);
+    this.test = toSamples(this.dataset, this.dataset.test, network.features);
+  }
+
+  /** Swaps the training data but keeps the current weights and optimizer state (live data editing). */
+  setData(dataset: ExperimentConfig['dataset']): void {
+    this.config = { ...this.config, dataset };
+    this.loadData();
+    this.order = Uint32Array.from({ length: this.train.count }, (_, i) => i);
   }
 
   /** Re-initializes weights, optimizer and batch order from the config seed. */
@@ -69,6 +81,7 @@ export class Trainer {
   /** One pass over the shuffled training set. Returns the mean mini-batch loss. */
   trainEpoch(): number {
     const n = this.train.count;
+    if (n === 0) return NaN;
     const bs = this.hyper.batchSize > 0 ? Math.min(this.hyper.batchSize, n) : n;
     this.batchRng.shuffle(this.order);
     let loss = 0;

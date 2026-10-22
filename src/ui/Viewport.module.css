@@ -17,14 +17,23 @@
   touch-action: none;
 }
 
-.stats {
+.topLeft {
   position: absolute;
   top: 22px;
   left: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: calc(100% - 400px);
+  min-width: 300px;
+}
+
+.stats {
   margin: 0;
   display: flex;
   gap: 36px;
-  pointer-events: none;
+  width: fit-content;
+  border-radius: var(--radius);
 }
 
 .stats dt {
@@ -207,5 +216,58 @@
 @media (max-width: 1180px) {
   .hint {
     display: none;
+  }
+}
+
+.narration {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: 420px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--fill);
+  font-size: 13px;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.narration::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+}
+
+.learning::before {
+  background: var(--positive);
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+.good {
+  background: #e9f7ee;
+  color: #1a7f37;
+}
+
+.good::before {
+  background: #30a14e;
+}
+
+.warn {
+  background: #fff4e5;
+  color: #a05a00;
+}
+
+.warn::before {
+  background: var(--negative);
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.3;
   }
 }

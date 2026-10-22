@@ -2,12 +2,21 @@ import { featureLabel } from '@core/data/features';
 import { activationFormula } from '@core/nn/activations';
 import { weightIndex, type Model } from '@core/nn/model';
 import { neuronBreakdown, type Trace } from '@core/nn/trace';
-import { liveModel, liveTrace } from '@state/derived';
+import { useEffect, useRef } from 'react';
+import { activationScales, liveModel, liveTrace, responseMap } from '@state/derived';
 import { useLab, type LabState, type Target } from '@state/store';
-import { CSS_COLORS, formatNumber, formatSigned } from '@viz/encoding';
+import {
+  CSS_COLORS,
+  formatNumber,
+  formatSigned,
+  neuronColor,
+  signedActivation,
+  type RGB,
+} from '@viz/encoding';
 import { layerName } from '@viz/three/sceneRefs';
 import { useLiveTick } from './hooks';
 import { CloseIcon } from './icons';
+import { Term } from './Term';
 import styles from './Inspector.module.css';
 
 const TOP_TERMS = 8;
@@ -59,6 +68,7 @@ function NeuronView({
   const { layer, index } = t;
   const last = model.sizes.length - 1;
   const setHover = useLab.getState().setHover;
+  const scales = activationScales(s);
 
   if (layer === 0) {
     // Input neuron: show its value and where it sends signal.
@@ -71,6 +81,10 @@ function NeuronView({
     const max = Math.max(...outs.map((o) => Math.abs(o.contribution)), 1e-9);
     return (
       <>
+        <p className={styles.plain}>
+          입력 뉴런은 계산하지 않고, 점의 <b>{featureLabel(s.config.network.features[index])}</b> 값을 다음
+          층의 모든 뉴런에 그대로 전달해요.
+        </p>
         <Result rows={[{ label: '입력값', value: formatSigned(value), color: signColor(value) }]} />
         <table className={styles.table}>
           <thead>
@@ -111,10 +125,42 @@ function NeuronView({
   const act = model.layers[layer - 1].activation;
   const isOutput = layer === last;
 
+  const top = terms[0];
+  const sv = signedActivation(b.a, act, scales[layer] ?? 1);
   return (
     <>
+      <p className={styles.plain}>
+        {isOutput ? (
+          <>
+            이 입력을{' '}
+            <b style={{ color: signColor(b.a - 0.5) }}>
+              {b.a >= 0.5 ? '파란 점(클래스 1)' : '주황 점(클래스 0)'}
+            </b>
+            으로 판단해요. 확신도 {formatNumber((b.a >= 0.5 ? b.a : 1 - b.a) * 100, 0)}%.
+          </>
+        ) : Math.abs(sv) < 0.15 ? (
+          <>이 입력에서는 거의 반응하지 않아요.</>
+        ) : (
+          <>
+            이 입력에서 <b style={{ color: signColor(sv) }}>{sv > 0 ? '+쪽(파랑)' : '−쪽(주황)'}</b>으로
+            반응해요.
+          </>
+        )}{' '}
+        {top && Math.abs(top.contribution) > 1e-3 && (
+          <>
+            영향이 가장 큰 입력: <b>{neuronLabel(s, layer - 1, top.from)}</b> (
+            {top.contribution > 0 ? '+쪽으로 밀어 올림' : '−쪽으로 끌어내림'})
+          </>
+        )}
+      </p>
+      <ResponseMap model={model} s={s} layer={layer} index={index} scale={scales[layer] ?? 1} />
       <p className={styles.formula}>
-        z = Σ w·a + b<span>{act}</span>
+        <span>
+          <Term id="contribution">z = Σ w·a</Term> + <Term id="bias">b</Term>
+        </span>
+        <span>
+          <Term id="activation">{act}</Term>
+        </span>
       </p>
       <table className={styles.table} data-testid="breakdown">
         <thead>
@@ -180,6 +226,67 @@ function NeuronView({
         ]}
       />
     </>
+  );
+}
+
+const MAP_RES = 40;
+
+/** Where in the input space this neuron responds (+ blue / − orange): its "response map". */
+function ResponseMap({
+  model,
+  s,
+  layer,
+  index,
+  scale,
+}: {
+  model: Model;
+  s: LabState;
+  layer: number;
+  index: number;
+  scale: number;
+}) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const isOutput = layer === model.sizes.length - 1;
+  const act = model.layers[layer - 1].activation;
+  const grid = responseMap(model, s.config.network.features, layer, index, MAP_RES);
+
+  useEffect(() => {
+    const c = ref.current;
+    if (!c) return;
+    c.width = c.height = MAP_RES;
+    const ctx = c.getContext('2d')!;
+    const img = ctx.createImageData(MAP_RES, MAP_RES);
+    const rgb: RGB = [0, 0, 0];
+    for (let k = 0; k < grid.length; k++) {
+      neuronColor(signedActivation(grid[k], act, scale), rgb);
+      img.data[k * 4] = rgb[0] * 255;
+      img.data[k * 4 + 1] = rgb[1] * 255;
+      img.data[k * 4 + 2] = rgb[2] * 255;
+      img.data[k * 4 + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  }, [grid, act, scale]);
+
+  const pt = s.probe.point;
+  return (
+    <figure className={styles.map}>
+      <div className={styles.mapCanvas}>
+        <canvas ref={ref} aria-label="응답 맵" />
+        {pt && (
+          <span
+            className={styles.mapProbe}
+            style={{ left: `${((pt[0] + 1) / 2) * 100}%`, top: `${((1 - pt[1]) / 2) * 100}%` }}
+          />
+        )}
+      </div>
+      <figcaption>
+        <b>응답 맵</b>
+        {isOutput
+          ? '입력 공간 전체에 대한 최종 판단이에요. 데이터 그림의 배경과 같아요.'
+          : '입력 공간의 각 위치에서 이 뉴런이 어떻게 반응하는지예요. 파랑은 +, 주황은 −, 흰색은 0이에요.'}
+        {pt && ' 동그라미가 지금 입력이에요.'}
+      </figcaption>
+    </figure>
   );
 }
 

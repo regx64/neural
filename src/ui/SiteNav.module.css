@@ -1,0 +1,43 @@
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--separator);
+}
+
+.inner {
+  max-width: 1024px;
+  margin: 0 auto;
+  height: 48px;
+  padding: 0 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.logo {
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.links {
+  display: flex;
+  gap: 26px;
+}
+
+.links a {
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.links a:hover,
+.links a[aria-current='page'] {
+  color: var(--text);
+}

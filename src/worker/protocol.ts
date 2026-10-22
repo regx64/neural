@@ -12,6 +12,7 @@ export type Command =
   | { type: 'step'; epochs: number }
   | { type: 'reset' }
   | { type: 'setHyper'; hyper: Partial<Hyper> }
+  | { type: 'setData'; dataset: ExperimentConfig['dataset'] }
   | { type: 'setSpeed'; speed: Speed };
 
 /** Worker → main thread. `version` lets the main thread drop states from a superseded config. */

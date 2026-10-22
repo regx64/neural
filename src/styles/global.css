@@ -48,3 +48,21 @@ input {
     animation-duration: 0ms !important;
   }
 }
+
+/* Lesson spotlight on the UI region a step is about. */
+.tour-highlight {
+  position: relative;
+  box-shadow:
+    0 0 0 3px var(--link),
+    0 0 0 8px rgba(0, 102, 204, 0.18) !important;
+  animation: tour-pulse 1.8s var(--ease) infinite;
+  z-index: 1;
+}
+
+@keyframes tour-pulse {
+  50% {
+    box-shadow:
+      0 0 0 3px var(--link),
+      0 0 0 12px rgba(0, 102, 204, 0.06);
+  }
+}

@@ -133,6 +133,10 @@ self.onmessage = (e: MessageEvent<Command>) => {
       case 'setHyper':
         trainer?.setHyper(cmd.hyper);
         break;
+      case 'setData':
+        trainer?.setData(cmd.dataset);
+        emit(true);
+        break;
       case 'setSpeed':
         speed = cmd.speed;
         owed = 0;

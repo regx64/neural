@@ -1,3 +1,4 @@
+import { SiteNav } from '@ui/SiteNav';
 import { HeroDemo } from './HeroDemo';
 import styles from './Landing.module.css';
 
@@ -23,12 +24,7 @@ export function Landing() {
   const lab = `${import.meta.env.BASE_URL}lab/`;
   return (
     <div className={styles.page}>
-      <nav className={styles.nav}>
-        <div className={styles.navInner}>
-          <span className={styles.logo}>NEURAL</span>
-          <a href={lab}>연구실</a>
-        </div>
-      </nav>
+      <SiteNav current="home" />
 
       <header className={styles.hero}>
         <p className={styles.eyebrow}>NEURAL</p>
@@ -38,8 +34,8 @@ export function Landing() {
           <a href={lab} className={styles.cta} data-testid="enter-lab">
             연구실 입장
           </a>
-          <a href="#features" className={styles.more}>
-            더 알아보기 <span aria-hidden>›</span>
+          <a href={`${import.meta.env.BASE_URL}learn/`} className={styles.more}>
+            AI가 처음이라면 여기부터 <span aria-hidden>›</span>
           </a>
         </div>
         <HeroDemo />
@@ -61,10 +57,15 @@ export function Landing() {
 
       <section className={styles.closing}>
         <h2>브라우저 하나면 충분합니다.</h2>
-        <p>설치도, 가입도 필요 없습니다.</p>
-        <a href={lab} className={styles.cta}>
-          지금 시작하기
-        </a>
+        <p>설치도, 가입도 필요 없습니다. 처음이라면 10분짜리 입문 과정부터 시작해 보세요.</p>
+        <div className={styles.ctaRow}>
+          <a href={`${import.meta.env.BASE_URL}learn/`} className={styles.cta}>
+            배우기 시작
+          </a>
+          <a href={lab} className={styles.more}>
+            연구실 바로 가기 <span aria-hidden>›</span>
+          </a>
+        </div>
       </section>
 
       <footer className={styles.footer}>

@@ -5,6 +5,9 @@ import type { Metrics } from '@core/train/trainer';
 import { TrainerClient } from '@worker/client';
 import type { Speed, WorkerEvent } from '@worker/protocol';
 import { History } from './history';
+import { loadSavedConfig, saveConfig } from './persist';
+
+const initialConfig = loadSavedConfig() ?? DEFAULT_CONFIG;
 
 /** A neuron (layer 0 = input) or a weight from neuron `from` of layer l−1 to neuron `to` of layer l. */
 export type Target =
@@ -56,6 +59,10 @@ export interface LabState {
   speed: Speed;
   camera: CameraRequest | null;
   error: string | null;
+  /** UI state that lessons can drive. */
+  advancedOpen: boolean;
+  drawMode: boolean;
+  drawClass: 0 | 1;
 
   connect(): () => void;
   play(): void;
@@ -75,6 +82,13 @@ export interface LabState {
   setHover(target: Target | null, pointer?: { x: number; y: number }): void;
   setEdgeMode(mode: EdgeMode): void;
   requestCamera(req: Omit<CameraRequest, 'id'>): void;
+  /** Replaces the whole experiment (used by lessons): paused, fresh weights, nothing selected. */
+  loadConfig(config: ExperimentConfig): void;
+  /** Live data editing: swaps in user-drawn points without resetting the weights. */
+  editPoints(points: number[], labels: number[]): void;
+  setAdvancedOpen(open: boolean): void;
+  setDrawMode(on: boolean): void;
+  setDrawClass(c: 0 | 1): void;
 }
 
 let client: TrainerClient | null = null;
@@ -104,7 +118,7 @@ export function layerSizesOf(config: ExperimentConfig): number[] {
 
 export const useLab = create<LabState>()((set, get) => {
   /** Applies a config change that needs new data/model, keeping the run going if it was. */
-  const reinit = (config: ExperimentConfig, dataChanged: boolean) => {
+  const reinit = (config: ExperimentConfig, dataChanged: boolean, running = get().live.running) => {
     const s = get();
     const version = s.version + 1;
     const dataset = dataChanged ? generateDataset(config.dataset, config.seed) : s.dataset;
@@ -114,7 +128,7 @@ export const useLab = create<LabState>()((set, get) => {
       config,
       version,
       dataset,
-      live: { ...emptyLive(), running: s.live.running },
+      live: { ...emptyLive(), running },
       historyTick: s.historyTick + 1,
       selection: s.selection && targetExists(s.selection, sizes) ? s.selection : null,
       hover: null,
@@ -122,7 +136,7 @@ export const useLab = create<LabState>()((set, get) => {
         ? { ...s.probe, sampleIndex: 0, point: s.probe.auto ? null : s.probe.point }
         : s.probe,
     });
-    client?.send({ type: 'init', config, version, running: s.live.running });
+    client?.send({ type: 'init', config, version, running });
     if (get().probe.point === null) get().advanceProbe();
   };
 
@@ -157,9 +171,9 @@ export const useLab = create<LabState>()((set, get) => {
   };
 
   return {
-    config: DEFAULT_CONFIG,
+    config: initialConfig,
     version: 1,
-    dataset: generateDataset(DEFAULT_CONFIG.dataset, DEFAULT_CONFIG.seed),
+    dataset: generateDataset(initialConfig.dataset, initialConfig.seed),
     live: emptyLive(),
     history: new History(),
     historyTick: 0,
@@ -171,6 +185,9 @@ export const useLab = create<LabState>()((set, get) => {
     speed: 50,
     camera: null,
     error: null,
+    advancedOpen: false,
+    drawMode: false,
+    drawClass: 1,
 
     connect() {
       client?.dispose();
@@ -231,5 +248,42 @@ export const useLab = create<LabState>()((set, get) => {
     setHover: (hover, pointer) => set(pointer ? { hover, pointer } : { hover }),
     setEdgeMode: (edgeMode) => set({ edgeMode }),
     requestCamera: (req) => set({ camera: { ...req, id: (get().camera?.id ?? 0) + 1 } }),
+    loadConfig(config) {
+      set({
+        selection: null,
+        hover: null,
+        edgeMode: 'weight',
+        drawMode: false,
+        probe: { point: null, auto: true, sampleIndex: 0 },
+      });
+      reinit(config, true, false);
+    },
+    editPoints(points, labels) {
+      const s = get();
+      const dataset: DatasetConfig = { ...s.config.dataset, id: 'custom', points, labels };
+      const config = { ...s.config, dataset };
+      set({ config, dataset: generateDataset(dataset, config.seed) });
+      client?.send({ type: 'setData', dataset });
+      if (get().probe.auto) get().advanceProbe();
+    },
+    setAdvancedOpen: (advancedOpen) => set({ advancedOpen }),
+    setDrawMode: (drawMode) => {
+      set({ drawMode });
+      // Start the drawing from whatever is on screen so the learner edits, not starts over.
+      const s = get();
+      if (drawMode && s.config.dataset.id !== 'custom') {
+        const n = s.dataset.count;
+        s.editPoints(Array.from(s.dataset.points.slice(0, n * 2)), Array.from(s.dataset.labels));
+      }
+    },
+    setDrawClass: (drawClass) => set({ drawClass }),
   };
+});
+
+// Auto-save the experiment so a reload (or a later visit) picks up where the learner left off.
+let saveTimer: ReturnType<typeof setTimeout> | undefined;
+useLab.subscribe((s, p) => {
+  if (s.config === p.config) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveConfig(s.config), 300);
 });

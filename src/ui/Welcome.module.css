@@ -1,0 +1,90 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(245, 245, 247, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: fade 240ms var(--ease);
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.card {
+  width: min(440px, 100%);
+  padding: 40px 36px 28px;
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: var(--shadow-float);
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.card h2 {
+  margin: 6px 0 0;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.lead {
+  margin: 12px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.actions {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.primary {
+  height: 44px;
+  padding: 0 28px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--text);
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.primary:hover {
+  background: #424245;
+}
+
+.secondary {
+  color: var(--link);
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.secondary:hover {
+  text-decoration: underline;
+}
+
+.skip {
+  margin-top: 24px;
+  background: none;
+  border: 0;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}

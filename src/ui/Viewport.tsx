@@ -10,6 +10,8 @@ import { Segmented } from './controls';
 import { useLiveTick } from './hooks';
 import { PauseIcon, PlayIcon, ResetIcon, StepIcon } from './icons';
 import { Inspector } from './Inspector';
+import { Term } from './Term';
+import { narrate } from '../content/narration';
 import styles from './Viewport.module.css';
 
 const SPEEDS: { value: Speed; label: string }[] = [
@@ -27,16 +29,20 @@ function Stats() {
   useLiveTick(15);
   const { metrics } = useLab.getState().live;
   const stats = [
-    { label: 'Epoch', value: metrics ? metrics.epoch.toLocaleString() : '0', id: 'epoch' },
     {
-      label: '손실',
+      label: <Term id="epoch">Epoch</Term>,
+      value: metrics ? metrics.epoch.toLocaleString() : '0',
+      id: 'epoch',
+    },
+    {
+      label: <Term id="loss" />,
       value: metrics ? formatNumber(metrics.trainLoss) : '—',
       id: 'train-loss',
       sub: metrics ? formatNumber(metrics.testLoss) : '—',
       subId: 'test-loss',
     },
     {
-      label: '정확도',
+      label: <Term id="accuracy" />,
       value: pct(metrics?.trainAccuracy),
       id: 'train-acc',
       sub: pct(metrics?.testAccuracy),
@@ -44,7 +50,7 @@ function Stats() {
     },
   ];
   return (
-    <dl className={styles.stats}>
+    <dl className={styles.stats} data-tour="stats">
       {stats.map((m) => (
         <div key={m.id}>
           <dt>{m.label}</dt>
@@ -53,12 +59,42 @@ function Stats() {
           </dd>
           {m.subId && (
             <dd className={`num ${styles.sub}`}>
-              검증 <span data-testid={`metric-${m.subId}`}>{m.sub}</span>
+              <Term id="validation">검증</Term> <span data-testid={`metric-${m.subId}`}>{m.sub}</span>
             </dd>
           )}
         </div>
       ))}
     </dl>
+  );
+}
+
+/** One plain-language sentence about what the model is doing right now. */
+function Narration() {
+  useLiveTick(4);
+  const s = useLab.getState();
+  const m = s.live.metrics;
+  const h = s.history;
+  let pastLoss: number | undefined;
+  if (m) {
+    for (let k = h.epochs.length - 1; k >= 0; k--)
+      if (h.epochs[k] <= m.epoch - 100) {
+        pastLoss = h.trainLoss[k];
+        break;
+      }
+  }
+  const { text, tone } = narrate({
+    running: s.live.running,
+    epoch: m?.epoch ?? 0,
+    trainLoss: m?.trainLoss ?? NaN,
+    trainAccuracy: m?.trainAccuracy ?? 0,
+    testAccuracy: m?.testAccuracy ?? NaN,
+    pastLoss,
+    sampleCount: s.dataset.train.length,
+  });
+  return (
+    <p className={`${styles.narration} ${styles[tone]}`} aria-live="polite" data-testid="narration">
+      {text}
+    </p>
   );
 }
 
@@ -68,7 +104,7 @@ function Player() {
   const edgeMode = useLab((s) => s.edgeMode);
   const { togglePlay, step, reset, setSpeed, setEdgeMode } = useLab.getState();
   return (
-    <div className={styles.player} role="toolbar" aria-label="학습 제어">
+    <div className={styles.player} role="toolbar" aria-label="학습 제어" data-tour="play">
       <button
         type="button"
         className={styles.icon}
@@ -225,9 +261,12 @@ export function Viewport() {
   const hasHover = useLab((s) => s.hover !== null);
   return (
     <main className={styles.wrap}>
-      <div className={styles.viewport} style={{ cursor: hasHover ? 'pointer' : 'grab' }}>
+      <div className={styles.viewport} style={{ cursor: hasHover ? 'pointer' : 'grab' }} data-tour="viewport">
         <NetworkScene />
-        <Stats />
+        <div className={styles.topLeft}>
+          <Stats />
+          <Narration />
+        </div>
         <Inspector />
         <Legend />
         <Hint />

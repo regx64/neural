@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { MinusIcon, PlusIcon } from './icons';
 import styles from './controls.module.css';
 
@@ -8,15 +8,18 @@ export function Card({
   aside,
   children,
   testId,
+  tour,
 }: {
-  title: string;
+  title: ReactNode;
   subtitle?: ReactNode;
   aside?: ReactNode;
   children: ReactNode;
   testId?: string;
+  /** Lesson spotlight anchor. */
+  tour?: string;
 }) {
   return (
-    <section className={styles.card} data-testid={testId}>
+    <section className={styles.card} data-testid={testId} data-tour={tour}>
       <header className={styles.cardHeader}>
         <div>
           <h2>{title}</h2>
@@ -38,15 +41,23 @@ export function Row({ label, children }: { label: ReactNode; children: ReactNode
   );
 }
 
-export function Field({ label, value, children }: { label: string; value?: ReactNode; children: ReactNode }) {
+export function Field({
+  label,
+  value,
+  children,
+}: {
+  label: ReactNode;
+  value?: ReactNode;
+  children: ReactNode;
+}) {
   return (
-    <label className={styles.field}>
+    <div className={styles.field}>
       <span className={styles.fieldLabel}>
         {label}
         {value !== undefined && <span className={styles.fieldValue}>{value}</span>}
       </span>
       {children}
-    </label>
+    </div>
   );
 }
 
@@ -183,17 +194,28 @@ export function Segmented<T extends string>({
 }
 
 /** A collapsible group, closed by default — keeps rarely used settings out of sight. */
-export function Disclosure({ title, children }: { title: string; children: ReactNode }) {
-  const [open, setOpen] = useState(false);
+export function Disclosure({
+  title,
+  children,
+  open,
+  onToggle,
+  tour,
+}: {
+  title: string;
+  children: ReactNode;
+  open: boolean;
+  onToggle: (open: boolean) => void;
+  tour?: string;
+}) {
   const id = useId();
   return (
-    <section className={styles.disclosure}>
+    <section className={styles.disclosure} data-tour={tour}>
       <button
         type="button"
         className={styles.disclosureButton}
         aria-expanded={open}
         aria-controls={id}
-        onClick={() => setOpen(!open)}
+        onClick={() => onToggle(!open)}
       >
         {title}
         <svg
