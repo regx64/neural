@@ -1,0 +1,12 @@
+.boundary {
+  display: block;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  cursor: crosshair;
+}
+
+.chart {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

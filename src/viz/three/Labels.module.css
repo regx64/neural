@@ -1,0 +1,25 @@
+.layer {
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.layer span {
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+}
+
+.feature {
+  pointer-events: none;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  transform: translate(-100%, -50%);
+}
